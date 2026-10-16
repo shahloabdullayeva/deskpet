@@ -154,7 +154,7 @@ class Deskpet {
     const text = stripEmoji(line.text);
     if (pet) {
       this.events.emit("say", { text, chime, mood: MOODS[kind] || "talk" });
-      if (!["tap", "chatter"].includes(kind)) this.addToChat("pet", text);
+      if (kind !== "tap") this.addToChat("pet", text);
     }
     if (chatId && this.telegram) await this.telegram.sendText(chatId, text, replyTo);
     return { ...line, text };
@@ -201,7 +201,7 @@ class Deskpet {
     const chatter = (this.config.pet?.chatterMinutes || 0) * 60_000;
     if (chatter && mood === "idle" && this.petRunning && Date.now() - this.lastChatter > chatter) {
       this.lastChatter = Date.now();
-      await this.say("chatter", {}, { chime: false });
+      await this.say("chatter", { memory: this.tools().context() });
     }
   }
 

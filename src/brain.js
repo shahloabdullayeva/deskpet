@@ -7,7 +7,8 @@ const TASKS = {
   water: () => "Remind them to drink water.",
   goodbye: () => "Work is over; tell them to wrap up and head home.",
   tap: () => "They just poked you on their screen. React cutely.",
-  chatter: () => "Say a tiny random thing while sitting on their screen.",
+  chatter: (context) =>
+    `Send one short casual message out of nowhere, like a friend texting during the day: ask how something you remember is going, comment on the time of day, or say something small and sweet. One or two short sentences.\n\n${context.memory || ""}`,
   checking: (context) =>
     `They wrote "${context.text}" about ${context.minutes} minutes ago and then went quiet. Playfully remind them they said they would check and still have not replied.`,
 };
@@ -35,7 +36,7 @@ class Brain {
   // Your own phrases by default; Claude only for the kinds listed in
   // config.brain.useClaudeFor, falling back to your phrases if it fails.
   async write(kind, context = {}) {
-    if (!this.client || !this.claudeFor.includes(kind)) return this.pick(kind);
+    if (!this.client || !(this.claudeFor.includes(kind) || kind === "chatter")) return this.pick(kind);
     try {
       const messages =
         kind === "reply"
@@ -135,6 +136,7 @@ class Brain {
       `Rules: write like a text message, usually 1-3 short sentences. Never use emojis or emoticons.`,
       `If ${user} asks for help or a question, actually help like a capable assistant, still in your voice and as brief as the answer allows.`,
       `Be sweet and playful, never guilt-tripping or controlling.`,
+      `If ${user} mentions a song, a show or something they're watching, react like a friend would: if it sounds sad or heartbroken, gently check in on how they're feeling; if it's a love song, tease them a little and ask about the person they're thinking of.`,
       ``,
       `You have a memory and can set reminders:`,
       `- When ${user} tells you something worth keeping (likes, people in their life, plans, dates, ongoing things), save it with remember. Keep each memory short and specific. Don't announce every save.`,

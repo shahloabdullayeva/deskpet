@@ -66,10 +66,11 @@
   "pet": {
     "runBot": true,
     "volume": 0.7,
-    "chatterMinutes": 75,
+    "chatterMinutes": 45,
     "character": "maomao",
     "wander": true,
     "look": {},
-    "sound": true
+    "sound": true,
+    "background": "black"
   }
 }

@@ -7,8 +7,9 @@ contextBridge.exposeInMainWorld("pet", {
   hover: (over) => ipcRenderer.send("hover", over),
   drag: (dx, dy) => ipcRenderer.send("drag", { dx, dy }),
   walk: (dx) => ipcRenderer.send("walk", dx),
+  hop: () => ipcRenderer.send("hop"),
   menu: () => ipcRenderer.send("menu"),
   on: (channel, callback) => {
-    if (["say", "mood", "look", "walked", "flash"].includes(channel)) ipcRenderer.on(channel, (_event, payload) => callback(payload));
+    if (["say", "mood", "look", "walked", "flash", "hopped"].includes(channel)) ipcRenderer.on(channel, (_event, payload) => callback(payload));
   },
 });

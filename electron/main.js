@@ -70,6 +70,7 @@ function look() {
     colors: settings.look || {},
     images,
     wander: settings.wander !== false,
+    background: settings.background || "black",
     volume: settings.volume ?? 0.7,
   };
 }
@@ -116,6 +117,21 @@ function walk(dx) {
     }
     win.setPosition(now + step, y);
   }, 16);
+}
+
+// Jump to another screen (or somewhere else on this one if there is only one), landing on
+// the bottom edge like she walked there.
+function hop() {
+  clearInterval(walkTimer);
+  const [x, y] = win.getPosition();
+  const here = screen.getDisplayNearestPoint({ x, y });
+  const others = screen.getAllDisplays().filter((display) => display.id !== here.id);
+  const target = others.length ? others[Math.floor(Math.random() * others.length)] : here;
+  const area = target.workArea;
+  const left = area.x + Math.round(Math.random() * Math.max(0, area.width - WIDTH));
+  win.setPosition(left, area.y + area.height - HEIGHT);
+  if (chatWin && !chatWin.isDestroyed() && chatWin.isVisible()) placeChat();
+  send("hopped");
 }
 
 // The chat opens next to her, on whichever side of the screen has room.
@@ -233,6 +249,7 @@ app.whenReady().then(() => {
   ipcMain.on("open-chat", openChat);
   ipcMain.on("hover", (_event, over) => win.setIgnoreMouseEvents(!over, { forward: true }));
   ipcMain.on("walk", (_event, dx) => walk(dx));
+  ipcMain.on("hop", hop);
   ipcMain.on("drag", (_event, { dx, dy }) => {
     clearInterval(walkTimer);
     const [x, y] = win.getPosition();

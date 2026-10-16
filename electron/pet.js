@@ -18,7 +18,7 @@ let flapTimer;
 let chimes;
 
 function render() {
-  const keep = [...petEl.classList].filter((name) => ["walking", "held", "left", "mouth-shut"].includes(name) || name.startsWith("act-"));
+  const keep = [...petEl.classList].filter((name) => ["walking", "held", "left", "mouth-shut", "hop-out", "hop-in"].includes(name) || name.startsWith("act-"));
   petEl.className = [face, ...keep].join(" ");
   const held = petEl.classList.contains("held");
   const image = (held && images.held) || (walking && images.walk) || images[face] || images.idle;
@@ -101,11 +101,19 @@ function walk() {
   window.pet.walk(dx);
 }
 
+// Jump up and out, reappear on another screen, land with a little bounce.
+function hop() {
+  walking = true;
+  petEl.classList.add("hop-out");
+  setTimeout(() => window.pet.hop(), 450);
+}
+
 function live() {
   setTimeout(live, 12000 + Math.random() * 25000);
   if (talking || walking || hovered || face !== "idle" || document.hidden) return;
   const roll = Math.random();
-  if (wander && roll < 0.3) return walk();
+  if (wander && roll < 0.12) return hop();
+  if (wander && roll < 0.4) return walk();
   const names = Object.keys(ACTIONS);
   act(names[Math.floor(Math.random() * names.length)]);
 }
@@ -167,6 +175,16 @@ window.pet.on("flash", (mood) => {
   flashTimer = setTimeout(() => !talking && setFace(base), mood === "talk" ? 8000 : 1600);
 });
 
+window.pet.on("hopped", () => {
+  petEl.classList.remove("hop-out");
+  petEl.classList.add("hop-in");
+  setTimeout(() => {
+    petEl.classList.remove("hop-in");
+    walking = false;
+    render();
+  }, 600);
+});
+
 window.pet.on("walked", () => {
   walking = false;
   petEl.classList.remove("walking");
@@ -180,6 +198,7 @@ window.pet.on("look", (look) => {
   images = look.images || {};
   volume = look.volume;
   wander = look.wander !== false;
+  document.documentElement.classList.toggle("bg-black", look.background !== "none");
   document.documentElement.classList.toggle("maomao", look.character === "maomao");
   const names = {
     hair: "--hair", hairShine: "--hair-shine", eyes: "--eyes", skin: "--skin", outfit: "--outfit", outfitDark: "--outfit-dark",

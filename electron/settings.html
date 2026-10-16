@@ -24,6 +24,8 @@
           <select id="character"><option value="maomao">Maomao</option><option value="catgirl">Cat-girl</option></select>
         </div>
       </div>
+      <label for="background">Background</label>
+      <select id="background"><option value="black">Black</option><option value="none">None (see-through)</option></select>
     </section>
 
     <section>
@@ -54,7 +56,14 @@
     <section>
       <h2>Behaviour</h2>
       <label class="check"><input id="sound" type="checkbox"> Chime when a message pops up</label>
-      <label class="check"><input id="wander" type="checkbox"> Let her walk around the screen</label>
+      <label class="check"><input id="wander" type="checkbox"> Let her walk around and hop between screens</label>
+      <label for="chatterMinutes">Casual messages</label>
+      <select id="chatterMinutes">
+        <option value="0">Off</option>
+        <option value="90">Now and then (about every 1.5 hours)</option>
+        <option value="45">Sometimes (about every 45 minutes)</option>
+        <option value="20">Often (about every 20 minutes)</option>
+      </select>
     </section>
 
     <section>

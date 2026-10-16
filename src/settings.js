@@ -42,6 +42,8 @@ function read(home) {
     checkins,
     sound: config.pet?.sound !== false,
     wander: config.pet?.wander !== false,
+    background: config.pet?.background || "black",
+    chatterMinutes: String([0, 90, 45, 20].reduce((best, option) => (Math.abs(option - (config.pet?.chatterMinutes ?? 45)) < Math.abs(best - (config.pet?.chatterMinutes ?? 45)) ? option : best))),
     anthropicKey: secrets.anthropicKey || "",
     telegramToken: secrets.telegramToken || "",
     pairCode: secrets.pairCode || `maomao${Math.floor(1000 + Math.random() * 9000)}`,
@@ -59,7 +61,14 @@ function write(home, form) {
     workHours: { start: form.start || "09:00", end: form.end || "18:00", days: (form.days || []).map(Number) },
     checkins: CHECKINS.filter((kind) => form.checkins?.[kind]?.on).map((kind) => ({ time: form.checkins[kind].time, kind })),
   });
-  config.pet = { ...(config.pet || {}), character: form.character || "maomao", sound: form.sound !== false, wander: form.wander !== false };
+  config.pet = {
+    ...(config.pet || {}),
+    character: form.character || "maomao",
+    sound: form.sound !== false,
+    wander: form.wander !== false,
+    background: form.background === "none" ? "none" : "black",
+    chatterMinutes: Number(form.chatterMinutes) || 0,
+  };
 
   fs.writeFileSync(path.join(home, "config.json"), JSON.stringify(config, null, 2));
   fs.writeFileSync(
