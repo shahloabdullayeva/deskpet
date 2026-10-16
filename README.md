@@ -26,8 +26,9 @@ Everything is on the download page:
 1. Download **Maomao-Setup-Page.html** and open it in Chrome or Edge.
 2. Fill it in: names, his work hours, when she checks in, and her lines in your words.
    Press 🎙 next to a line to record yourself saying it.
-3. Telegram bot: in Telegram open **@BotFather** → `/newbot` → copy the token into the page.
-   Then `/setprivacy` → your bot → **Disable**.
+3. *(Optional)* Telegram bot: in Telegram open **@BotFather** → `/newbot` → copy the token into
+   the page. Then `/setprivacy` → your bot → **Disable**. Skip it and she lives only on his desk
+   (see below).
 4. Press **Download setup file** and send **maomao-setup.maomao** to him privately
    (it contains your bot token).
 
@@ -44,7 +45,22 @@ Everything is on the download page:
 > right-click Maomao → **Load setup file…**. Check that your company allows small apps like
 > this, and that Telegram isn't blocked on the office network.
 
-### Then, together
+### Without a Telegram bot
+
+Leave the bot token empty and everything happens on his screen only:
+
+| | Without a bot | With a bot |
+|---|---|---|
+| Check-ins on his desk in your voice | ✅ | ✅ |
+| Pokes, walking, herbs, all her moves | ✅ | ✅ |
+| Check-ins also sent to his Telegram | — | ✅ |
+| "You said checking 👀" reminders | — | ✅ (needs to see your group chat) |
+| You send text / voice notes to his desk | — | ✅ |
+| He talks to her, you get his messages | — | ✅ |
+
+You can add a bot any time later: put the token in the setup page and send him the new file.
+
+### Then, together (only with a bot)
 
 - You send the bot `/pair <code> me`, he sends `/pair <code> him` (the code is on the setup page).
 - Add the bot to a group with the two of you.

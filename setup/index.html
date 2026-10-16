@@ -104,7 +104,8 @@
   </section>
 
   <section>
-    <h2>4. Telegram</h2>
+    <h2>4. Telegram (optional)</h2>
+    <p class="hint">Skip this and she lives only on his desk: check-ins, your voice, pokes and all her moves still work. With a bot she also messages him on Telegram, catches "checking" in your group chat, and you can send things to his desk from your phone.</p>
     <ol class="steps">
       <li>In Telegram open <b>@BotFather</b>, send <code>/newbot</code>, pick a name, copy the token here.</li>
       <li>Still in BotFather: <code>/setprivacy</code> → your bot → <b>Disable</b> (so she sees "checking" in the group).</li>
@@ -482,7 +483,7 @@ $("existing").onchange = async () => {
 
 $("download").onclick = () => {
   const setup = collect();
-  if (!setup.secrets.telegramToken && !confirm("No Telegram bot token yet — she'll only work on his desk. Download anyway?")) return;
+  if (!setup.secrets.telegramToken && !confirm("No Telegram bot, so she'll live only on his desk (no Telegram messages or \"checking\" reminders). That's fine. Download?")) return;
   const blob = new Blob([JSON.stringify(setup)], { type: "application/octet-stream" });
   const link = el("a", { href: URL.createObjectURL(blob), download: "maomao-setup.maomao" });
   document.body.append(link);
