@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; media-src data:; style-src 'self'">
+<link rel="stylesheet" href="pet.css">
+</head>
+<body>
+<div id="stage">
+  <div id="bubble" hidden></div>
+  <div id="pet" class="idle">
+    <img id="art" alt="" hidden>
+    <svg id="drawn" viewBox="0 0 200 260" aria-hidden="true">
+      <g class="body">
+        <!-- tail -->
+        <path class="hair tail" d="M150 228 Q190 215 182 180 Q178 168 170 176 Q175 205 146 214 Z"/>
+        <!-- back hair -->
+        <path class="hair" d="M38 105 Q30 38 100 30 Q170 38 162 105 L170 190 Q150 186 140 160 L60 160 Q50 186 30 190 Z"/>
+        <!-- hoodie -->
+        <path class="outfit" d="M52 252 Q50 190 100 176 Q150 190 148 252 Z"/>
+        <path class="outfit-dark" d="M84 182 L100 204 L116 182 Q108 178 100 178 Q92 178 84 182 Z"/>
+        <path class="outfit-dark" d="M70 252 Q72 226 100 222 Q128 226 130 252 Z"/>
+        <circle class="skin" cx="76" cy="230" r="11"/>
+        <circle class="skin" cx="124" cy="230" r="11"/>
+        <rect class="skin" x="91" y="160" width="18" height="20" rx="6"/>
+      </g>
+      <g class="head">
+        <!-- cat ears -->
+        <path class="hair" d="M48 70 L52 18 L92 46 Z"/>
+        <path class="hair" d="M152 70 L148 18 L108 46 Z"/>
+        <path class="ear-inner" d="M56 58 L58 30 L82 47 Z"/>
+        <path class="ear-inner" d="M144 58 L142 30 L118 47 Z"/>
+        <ellipse class="skin" cx="100" cy="108" rx="60" ry="56"/>
+        <!-- bangs -->
+        <path class="hair" d="M40 112 Q36 42 100 40 Q164 42 160 112 Q154 84 140 74 Q136 96 116 86 Q110 102 96 86 Q84 100 72 78 Q58 88 40 112 Z"/>
+        <path class="hair-shine" d="M66 60 Q90 48 118 52 Q96 54 74 66 Z"/>
+        <!-- side locks -->
+        <path class="hair" d="M40 100 Q34 150 48 172 Q54 140 52 112 Z"/>
+        <path class="hair" d="M160 100 Q166 150 152 172 Q146 140 148 112 Z"/>
+
+        <g class="eyes open-eyes">
+          <g class="eye">
+            <ellipse class="white" cx="76" cy="116" rx="13" ry="16"/>
+            <ellipse class="iris" cx="77" cy="118" rx="10.5" ry="13.5"/>
+            <ellipse class="pupil" cx="77" cy="121" rx="5" ry="7"/>
+            <circle class="shine" cx="81" cy="111" r="4.2"/>
+            <circle class="shine" cx="73" cy="125" r="2"/>
+            <path class="lash" d="M60 106 Q76 92 93 104 L92 108 Q76 98 62 110 Z"/>
+          </g>
+          <g class="eye">
+            <ellipse class="white" cx="124" cy="116" rx="13" ry="16"/>
+            <ellipse class="iris" cx="123" cy="118" rx="10.5" ry="13.5"/>
+            <ellipse class="pupil" cx="123" cy="121" rx="5" ry="7"/>
+            <circle class="shine" cx="127" cy="111" r="4.2"/>
+            <circle class="shine" cx="119" cy="125" r="2"/>
+            <path class="lash" d="M140 106 Q124 92 107 104 L108 108 Q124 98 138 110 Z"/>
+          </g>
+        </g>
+        <g class="eyes happy-eyes">
+          <path class="line" d="M64 120 Q76 104 88 120"/>
+          <path class="line" d="M112 120 Q124 104 136 120"/>
+        </g>
+        <g class="eyes sleepy-eyes">
+          <path class="line" d="M64 118 Q76 126 88 118"/>
+          <path class="line" d="M112 118 Q124 126 136 118"/>
+        </g>
+        <g class="eyes pout-eyes">
+          <path class="line" d="M64 114 L88 120"/>
+          <path class="line" d="M136 114 L112 120"/>
+          <ellipse class="iris" cx="77" cy="125" rx="7" ry="6"/>
+          <ellipse class="iris" cx="123" cy="125" rx="7" ry="6"/>
+        </g>
+
+        <ellipse class="blush" cx="62" cy="138" rx="10" ry="5"/>
+        <ellipse class="blush" cx="138" cy="138" rx="10" ry="5"/>
+
+        <path class="mouth closed" d="M93 142 Q100 148 107 142"/>
+        <path class="mouth cat" d="M90 141 Q95 147 100 142 Q105 147 110 141"/>
+        <ellipse class="mouth open" cx="100" cy="145" rx="6" ry="5"/>
+        <path class="mouth pout" d="M94 146 Q100 141 106 146"/>
+      </g>
+      <text class="zzz" x="150" y="40">z</text>
+      <text class="zzz z2" x="164" y="26">z</text>
+    </svg>
+  </div>
+</div>
+<script src="pet.js"></script>
+</body>
+</html>

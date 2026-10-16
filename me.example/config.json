@@ -1,0 +1,52 @@
+{
+  "me": "Me",
+  "him": "babe",
+  "petName": "Mochi",
+  "timezone": "",
+
+  "workHours": { "start": "09:00", "end": "18:00", "days": [1, 2, 3, 4, 5] },
+
+  "checkins": [
+    { "time": "09:15", "kind": "morning" },
+    { "time": "11:30", "kind": "howsYourDay" },
+    { "time": "13:00", "kind": "lunch" },
+    { "time": "15:30", "kind": "water" },
+    { "time": "18:00", "kind": "goodbye" }
+  ],
+
+  "checking": {
+    "words": ["checking", "let me check", "will check", "i'll check", "one sec", "1 sec", "sec", "brb", "wait", "hold on", "one moment"],
+    "nudgeAfterMinutes": 20,
+    "maxNudgesPerDay": 4
+  },
+
+  "telegram": {
+    "sendAsVoice": true,
+    "forwardHisMessagesToMe": true
+  },
+
+  "voice": {
+    "elevenlabsVoiceId": "",
+    "elevenlabsModel": "eleven_multilingual_v2"
+  },
+
+  "brain": {
+    "model": "claude-opus-5-5",
+    "useClaudeFor": ["checking", "reply"]
+  },
+
+  "pet": {
+    "runBot": true,
+    "speakOutLoud": true,
+    "volume": 0.7,
+    "chatterMinutes": 75,
+    "look": {
+      "hair": "#4a3355",
+      "hairShine": "#6b4d7a",
+      "eyes": "#8a5cf0",
+      "skin": "#ffe6d8",
+      "outfit": "#ffb8cf",
+      "outfitDark": "#f08fb0"
+    }
+  }
+}

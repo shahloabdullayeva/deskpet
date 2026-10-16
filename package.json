@@ -1,0 +1,22 @@
+{
+  "name": "deskpet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A little anime desk pet that talks like you and checks in on Telegram.",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "bot": "node src/bot.js",
+    "learn": "node src/learn.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0"
+  },
+  "devDependencies": {
+    "electron": "^44.8.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
