@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'">
+<title>Settings</title>
+<link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <header>
+    <img src="icon.png" alt="">
+    <div><b>Settings</b><span id="sub">Set up your desk companion</span></div>
+    <button id="close" title="Close">✕</button>
+  </header>
+  <main>
+    <section>
+      <h2>About you</h2>
+      <label for="name">Your name</label>
+      <input id="name" type="text" placeholder="What should she call you?">
+      <div class="two">
+        <div><label for="petName">Her name</label><input id="petName" type="text"></div>
+        <div>
+          <label for="character">Look</label>
+          <select id="character"><option value="maomao">Maomao</option><option value="catgirl">Cat-girl</option></select>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Chat</h2>
+      <label for="anthropicKey">Claude API key</label>
+      <input id="anthropicKey" type="password" placeholder="sk-ant-…" autocomplete="off">
+      <p class="hint">Lets you chat with her, and lets her remember things and set reminders. Get one at console.anthropic.com. It stays on this computer.</p>
+      <label for="talksLike">She texts like (optional)</label>
+      <input id="talksLike" type="text" placeholder="Someone's name, e.g. your girlfriend">
+      <label for="style">How she should talk (optional)</label>
+      <textarea id="style" rows="3" placeholder="mostly lowercase, short messages, calls me babe, teases a little"></textarea>
+    </section>
+
+    <section>
+      <h2>Work day</h2>
+      <div class="two">
+        <div><label for="start">Starts</label><input id="start" type="time"></div>
+        <div><label for="end">Ends</label><input id="end" type="time"></div>
+      </div>
+      <label>Days</label>
+      <div id="days" class="days"></div>
+      <label>Check-ins</label>
+      <div id="checkins"></div>
+      <label for="timezone">Time zone</label>
+      <input id="timezone" type="text">
+    </section>
+
+    <section>
+      <h2>Behaviour</h2>
+      <label class="check"><input id="sound" type="checkbox"> Chime when a message pops up</label>
+      <label class="check"><input id="wander" type="checkbox"> Let her walk around the screen</label>
+    </section>
+
+    <section>
+      <h2>Telegram (optional)</h2>
+      <p class="hint">Also get her check-ins and reminders on your phone, and chat with her there. Make a bot with @BotFather on Telegram, paste its token, then send the bot <code id="pair-hint"></code>.</p>
+      <label for="telegramToken">Bot token</label>
+      <input id="telegramToken" type="password" autocomplete="off" placeholder="123456789:AA…">
+    </section>
+  </main>
+  <footer>
+    <span id="saved"></span>
+    <button id="cancel">Cancel</button>
+    <button id="save" class="primary">Save</button>
+  </footer>
+  <script src="settings.js"></script>
+</body>
+</html>

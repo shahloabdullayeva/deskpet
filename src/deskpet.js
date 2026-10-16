@@ -6,7 +6,8 @@ const { load } = require("./config");
 const { localParts, isWorkTime, isDue } = require("./clock");
 const { saidChecking } = require("./checking");
 const { Telegram } = require("./telegram");
-const { Brain } = require("./brain");
+const { Brain, stripEmoji } = require("./brain");
+const { Memory } = require("./memory");
 
 const MOODS = { tap: "happy", reply: "happy", goodbye: "happy", morning: "happy", checking: "pout" };
 
@@ -18,11 +19,13 @@ class Deskpet {
     this.config = loaded.config;
     this.env = loaded.env;
     this.statePath = path.join(loaded.dataDir, "state.json");
+    this.chatPath = path.join(loaded.dataDir, "chat.json");
+    this.desk = this.readChat();
+    this.memory = new Memory(loaded.dataDir, loaded.config.timezone);
     this.brain = new Brain(loaded);
     this.telegram = loaded.env.telegramToken ? new Telegram(loaded.env.telegramToken) : null;
     this.events = new EventEmitter();
     this.waiting = new Map();
-    this.history = [];
     this.state = this.readState();
     this.mood = null;
     this.lastChatter = Date.now();
@@ -34,6 +37,67 @@ class Deskpet {
     } catch {
       return { offset: 0, me: null, him: null, day: null, fired: [], nudges: 0 };
     }
+  }
+
+  readChat() {
+    try {
+      return JSON.parse(fs.readFileSync(this.chatPath, "utf8"));
+    } catch {
+      return [];
+    }
+  }
+
+  // The chat: everything she says on his screen and everything he types to her.
+  addToChat(role, text) {
+    const entry = { role, text: stripEmoji(text), at: Date.now() };
+    this.desk = [...this.desk, entry].slice(-300);
+    fs.mkdirSync(path.dirname(this.chatPath), { recursive: true });
+    fs.writeFileSync(this.chatPath, JSON.stringify(this.desk));
+    this.events.emit("chat", entry);
+    return entry;
+  }
+
+  // He talks to her, on his screen or on Telegram; both share one conversation and one memory.
+  async deskChat(text) {
+    this.addToChat("him", text);
+    if (this.telegram && this.config.telegram?.forwardHisMessagesToMe && this.state.me?.chatId) {
+      this.telegram.sendText(this.state.me.chatId, `${this.config.him} told ${this.config.petName}: ${text}`).catch(() => {});
+    }
+    const reply = await this.brain.chat(this.desk.slice(-40), this.tools());
+    this.addToChat("pet", reply.text);
+    return reply;
+  }
+
+  tools() {
+    const memory = this.memory;
+    return {
+      context: () => {
+        const parts = this.now();
+        const day = new Date().toLocaleDateString("en-US", { weekday: "long", timeZone: this.config.timezone || undefined });
+        return [
+          `Right now for him it is ${day} ${parts.date} ${parts.hhmm}${this.config.timezone ? ` (${this.config.timezone})` : ""}.`,
+          ``,
+          `What you remember about him:`,
+          memory.memories.length ? memory.memories.map((m) => `- [${m.id}] ${m.text}`).join("\n") : "- (nothing yet)",
+          ``,
+          `His upcoming reminders:`,
+          memory.reminders.length ? memory.reminders.map((r) => `- [${r.id}] ${memory.format(r.due)}: ${r.text}`).join("\n") : "- (none)",
+        ].join("\n");
+      },
+      run: (name, input) => {
+        if (name === "remember") return `Saved as memory ${memory.remember(input.text).id}.`;
+        if (name === "forget") return memory.forget(input.id) ? "Forgotten." : "No memory with that id.";
+        if (name === "set_reminder") {
+          const reminder = memory.remind(input.text, { at: input.at, inMinutes: input.in_minutes });
+          return `Reminder ${reminder.id} set for ${memory.format(reminder.due)}.`;
+        }
+        if (name === "list_reminders") {
+          return memory.reminders.map((r) => `[${r.id}] ${memory.format(r.due)}: ${r.text}`).join("\n") || "No reminders.";
+        }
+        if (name === "cancel_reminder") return memory.cancel(input.id) ? "Cancelled." : "No reminder with that id.";
+        throw new Error(`Unknown tool ${name}`);
+      },
+    };
   }
 
   saveState() {
@@ -87,9 +151,13 @@ class Deskpet {
   // Compose a line, show it on the desk (with a chime unless quiet) and/or send it on Telegram.
   async say(kind, context = {}, { chatId, replyTo, pet = true, chime = true } = {}) {
     const line = await this.brain.write(kind, context);
-    if (pet) this.events.emit("say", { text: line.text, chime, mood: MOODS[kind] || "talk" });
-    if (chatId && this.telegram) await this.telegram.sendText(chatId, line.text, replyTo);
-    return line;
+    const text = stripEmoji(line.text);
+    if (pet) {
+      this.events.emit("say", { text, chime, mood: MOODS[kind] || "talk" });
+      if (!["tap", "chatter"].includes(kind)) this.addToChat("pet", text);
+    }
+    if (chatId && this.telegram) await this.telegram.sendText(chatId, text, replyTo);
+    return { ...line, text };
   }
 
   tap() {
@@ -110,6 +178,13 @@ class Deskpet {
       this.state.fired.push(key);
       this.saveState();
       await this.say(checkin.kind, {}, { chatId: this.state.him?.chatId });
+    }
+
+    for (const reminder of this.memory.due()) {
+      const text = `Reminder: ${stripEmoji(reminder.text)}`;
+      this.events.emit("say", { text, chime: true, mood: "talk" });
+      this.addToChat("pet", text);
+      if (this.telegram && this.state.him?.chatId) await this.telegram.sendText(this.state.him.chatId, text).catch(() => {});
     }
 
     const rules = this.config.checking;
@@ -151,22 +226,17 @@ class Deskpet {
 
     if (isMe && isPrivate) {
       if (text) {
-        if (!this.petRunning) return this.telegram.sendText(chatId, "The pet isn't open on his computer right now 🥺");
-        this.events.emit("say", { text, chime: true, mood: "happy" });
-        return this.telegram.sendText(chatId, `${this.config.petName} said it on his desk 🐾`);
+        if (!this.petRunning) return this.telegram.sendText(chatId, "The pet isn't open on his computer right now.");
+        this.events.emit("say", { text: stripEmoji(text), chime: true, mood: "happy" });
+        this.addToChat("her", text);
+        return this.telegram.sendText(chatId, `${this.config.petName} showed it on his screen.`);
       }
     }
   }
 
   async chatWithHim(chatId, text) {
-    this.history.push({ role: "user", content: text });
-    this.history = this.history.slice(-12);
-    if (this.history[0].role !== "user") this.history.shift();
-    if (this.config.telegram?.forwardHisMessagesToMe && this.state.me?.chatId) {
-      await this.telegram.sendText(this.state.me.chatId, `💬 ${this.config.him} told ${this.config.petName}: ${text}`);
-    }
-    const line = await this.say("reply", { history: this.history }, { chatId });
-    this.history.push({ role: "assistant", content: line.text });
+    const reply = await this.deskChat(text);
+    await this.telegram.sendText(chatId, reply.text);
   }
 
   async command(message, text, { isMe, isPrivate }) {
@@ -177,19 +247,19 @@ class Deskpet {
     if (name === "/start" || name === "/help") {
       return this.telegram.sendText(
         chatId,
-        `Hi, I'm ${this.config.petName} 🐾\n\nTo set me up, each of you sends me once in private:\n/pair <code> me  (her)\n/pair <code> him  (him)\n\nShe can then:\n/test <kind> — send a check-in now (morning, howsYourDay, lunch, water, goodbye, checking)\n/status — see what I'm up to\nor just send me a message and I'll show it on his desk.`
+        `Hi, I'm ${this.config.petName}.\n\nTo set me up, each of you sends me once in private:\n/pair <code> me  (her)\n/pair <code> him  (him)\n\nShe can then:\n/test <kind> — send a check-in now (morning, howsYourDay, lunch, water, goodbye, checking)\n/status — see what I'm up to\nor just send me a message and I'll show it on his desk.`
       );
     }
 
     if (name === "/pair") {
-      if (!isPrivate) return this.telegram.sendText(chatId, "Send /pair to me in a private chat 🙈");
+      if (!isPrivate) return this.telegram.sendText(chatId, "Send /pair to me in a private chat.");
       const [code, who] = args;
       if (!this.env.pairCode || code !== this.env.pairCode || !["me", "him"].includes(who)) {
         return this.telegram.sendText(chatId, "Hmm, that code doesn't look right.");
       }
       this.state[who] = { userId: message.from.id, chatId, name: message.from.first_name };
       this.saveState();
-      return this.telegram.sendText(chatId, who === "me" ? "Got you 💕 I'll tell you when he talks to me." : `Hiii ${this.config.him} 🥰 I'll keep you company at work.`);
+      return this.telegram.sendText(chatId, who === "me" ? "Got you. I'll tell you when he talks to me." : `Hi ${this.config.him}, I'll keep you company at work.`);
     }
 
     if (!isMe) return;
@@ -199,7 +269,7 @@ class Deskpet {
       return this.telegram.sendText(
         chatId,
         [
-          `Paired: you ${this.state.me ? "✅" : "❌"} · him ${this.state.him ? "✅" : "❌"}`,
+          `Paired: you ${this.state.me ? "yes" : "no"}, him ${this.state.him ? "yes" : "no"}`,
           `Pet window open: ${this.petRunning ? "yes" : "no"}`,
           `Local time ${parts.hhmm}, ${isWorkTime(parts, this.config.workHours) ? "work hours" : "off work"}`,
           `Check-ins sent today: ${this.state.fired.length}/${(this.config.checkins || []).length}`,
@@ -212,11 +282,11 @@ class Deskpet {
     if (name === "/test") {
       const kind = args[0] || "howsYourDay";
       if (!this.state.him) {
-        await this.telegram.sendText(chatId, "He hasn't paired yet, so here's a preview 👇");
+        await this.telegram.sendText(chatId, "He hasn't paired yet, so here's a preview:");
         return this.say(kind, { text: "checking", minutes: 20 }, { chatId, pet: false });
       }
       await this.say(kind, { text: "checking", minutes: 20 }, { chatId: this.state.him.chatId });
-      return this.telegram.sendText(chatId, `Sent "${kind}" to him ✅`);
+      return this.telegram.sendText(chatId, `Sent "${kind}" to him.`);
     }
   }
 }

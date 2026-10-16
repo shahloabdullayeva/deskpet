@@ -122,7 +122,10 @@ for (const el of [petEl, bubble]) {
     if (!down) window.pet.hover(false);
   });
 }
-bubble.addEventListener("click", stopTalking);
+bubble.addEventListener("click", () => {
+  stopTalking();
+  window.pet.openChat();
+});
 petEl.addEventListener("contextmenu", (event) => {
   event.preventDefault();
   window.pet.menu();
@@ -155,6 +158,15 @@ window.addEventListener("mouseup", () => {
 });
 
 window.pet.on("say", say);
+// A quick face (happy when he opens the chat, talking while she "types" a reply).
+let flashTimer;
+window.pet.on("flash", (mood) => {
+  if (talking) return;
+  clearTimeout(flashTimer);
+  setFace(mood);
+  flashTimer = setTimeout(() => !talking && setFace(base), mood === "talk" ? 8000 : 1600);
+});
+
 window.pet.on("walked", () => {
   walking = false;
   petEl.classList.remove("walking");

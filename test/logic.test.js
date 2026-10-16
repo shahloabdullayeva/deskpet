@@ -10,7 +10,7 @@ const work = { start: "09:00", end: "18:00", days: [1, 2, 3, 4, 5] };
 test("spots short 'checking' messages", () => {
   assert.ok(saidChecking("checking", words));
   assert.ok(saidChecking("Checking!!", words));
-  assert.ok(saidChecking("ok let me check 👀", words));
+  assert.ok(saidChecking("ok let me check!", words));
   assert.ok(saidChecking("I’ll check", words));
   assert.ok(!saidChecking("rechecking", words));
   assert.ok(!saidChecking("hi babe", words));
@@ -46,5 +46,5 @@ test("uses your phrases without Claude and does not repeat back to back", async 
     assert.notStrictEqual(line.text, previous);
     previous = line.text;
   }
-  assert.strictEqual((await brain.write("checking", { text: "checking", minutes: 20 })).text, "🐾");
+  assert.strictEqual((await brain.write("checking", { text: "checking", minutes: 20 })).text, "hi");
 });

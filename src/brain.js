@@ -1,15 +1,15 @@
 const Anthropic = require("@anthropic-ai/sdk");
 
 const TASKS = {
-  morning: () => "Say good morning as he starts work.",
-  howsYourDay: () => "Ask him how his day at work is going.",
-  lunch: () => "Remind him to eat lunch.",
-  water: () => "Remind him to drink water.",
-  goodbye: () => "Work is over; tell him to wrap up and head home.",
-  tap: () => "He just poked you on his desk. React cutely.",
-  chatter: () => "Say a tiny random thing while sitting on his desk.",
+  morning: () => "Say good morning as they start work.",
+  howsYourDay: () => "Ask how their day at work is going.",
+  lunch: () => "Remind them to eat lunch.",
+  water: () => "Remind them to drink water.",
+  goodbye: () => "Work is over; tell them to wrap up and head home.",
+  tap: () => "They just poked you on their screen. React cutely.",
+  chatter: () => "Say a tiny random thing while sitting on their screen.",
   checking: (context) =>
-    `He wrote "${context.text}" about ${context.minutes} minutes ago and then went quiet. Playfully remind him he said he'd check and still hasn't replied.`,
+    `They wrote "${context.text}" about ${context.minutes} minutes ago and then went quiet. Playfully remind them they said they would check and still have not replied.`,
 };
 
 class Brain {
@@ -25,14 +25,14 @@ class Brain {
 
   pick(kind) {
     const lines = (this.phrases[kind] || []).filter((line) => line && line.text);
-    if (!lines.length) return { text: "🐾" };
+    if (!lines.length) return { text: "hi" };
     let index = Math.floor(Math.random() * lines.length);
     if (lines.length > 1 && index === this.last[kind]) index = (index + 1) % lines.length;
     this.last[kind] = index;
     return lines[index];
   }
 
-  // Your own phrases (and recordings) by default; Claude only for the kinds listed in
+  // Your own phrases by default; Claude only for the kinds listed in
   // config.brain.useClaudeFor, falling back to your phrases if it fails.
   async write(kind, context = {}) {
     if (!this.client || !this.claudeFor.includes(kind)) return this.pick(kind);
@@ -49,6 +49,45 @@ class Brain {
     }
   }
 
+  // A turn of the chat with him. history is [{ role: "him" | "pet" | "her", text }], oldest
+  // first. With a Claude key she can remember things and set reminders through `tools`.
+  async chat(history, tools) {
+    if (!this.client) return { text: this.pick("reply").text, offline: true };
+    try {
+      const messages = toMessages(history, this.config.me);
+      const system = [{ type: "text", text: this.system() }, { type: "text", text: tools.context() }];
+      for (let round = 0; round < 6; round++) {
+        const response = await this.client.beta.messages.create({
+          model: this.config.brain?.model || "claude-opus-5-5",
+          max_tokens: 4000,
+          betas: ["server-side-fallback-2026-07-01"],
+          fallbacks: "default",
+          output_config: { effort: "low" },
+          system,
+          tools: TOOLS,
+          messages,
+        });
+        if (response.stop_reason === "refusal") return { text: "hmm, let's talk about something else" };
+        if (response.stop_reason !== "tool_use") return { text: textOf(response) || "hm?" };
+        messages.push({ role: "assistant", content: response.content });
+        const results = [];
+        for (const block of response.content) {
+          if (block.type !== "tool_use") continue;
+          try {
+            results.push({ type: "tool_result", tool_use_id: block.id, content: String(tools.run(block.name, block.input || {})) });
+          } catch (error) {
+            results.push({ type: "tool_result", tool_use_id: block.id, content: error.message, is_error: true });
+          }
+        }
+        messages.push({ role: "user", content: results });
+      }
+      return { text: "okay, done" };
+    } catch (error) {
+      console.warn(`[brain] chat failed: ${error.message}`);
+      return { text: "my brain isn't connecting right now, try again in a bit?", offline: true };
+    }
+  }
+
   async ask(messages) {
     const response = await this.client.beta.messages.create({
       model: this.config.brain?.model || "claude-opus-5-5",
@@ -60,36 +99,120 @@ class Brain {
       messages,
     });
     if (response.stop_reason === "refusal") return "";
-    return response.content
-      .filter((block) => block.type === "text")
-      .map((block) => block.text)
-      .join("")
-      .trim();
+    return stripEmoji(textOf(response));
   }
 
   system() {
     const { me, him, petName } = this.config;
+    const user = him || "the user";
+    const maomao = (this.config.pet?.character || "maomao") === "maomao";
     const examples = Object.entries(this.phrases)
       .filter(([kind, lines]) => !kind.startsWith("_") && Array.isArray(lines))
       .flatMap(([, lines]) => lines.map((line) => line.text))
       .concat(this.examples)
       .map((text) => `- ${text.replace(/\s+/g, " ")}`)
       .join("\n");
+    const voice = me
+      ? [
+          `${me} made you for ${user}. Write exactly the way ${me} texts: their words, slang, capitalization and message length.`,
+          this.style.trim() ? `How ${me} describes their texting style:\n${this.style.trim()}` : ``,
+          `Messages ${me} wrote:\n${examples}`,
+          `You are ${me}'s desk pet, not ${me}: if asked, say so, and for anything serious tell ${user} to text ${me}.`,
+          `Messages marked [from ${me}] are ones ${me} sent personally.`,
+        ]
+      : [
+          `Talk like a close, warm friend texting: casual, short, a bit playful.`,
+          this.style.trim() ? `How ${user} wants you to talk:\n${this.style.trim()}` : ``,
+          `Example lines in your voice:\n${examples}`,
+        ];
     return [
-      `You are ${petName}, a little anime desk pet that ${me} made for her boyfriend (she calls him "${him}").`,
-      `You sit on his desk at work and text him on Telegram for her.`,
-      `Write exactly the way ${me} texts: her words, slang, emoji, capitalization and message length.`,
+      `You are ${petName}, a little anime desk companion who lives in the corner of ${user}'s computer screen.`,
+      `${user} can chat with you any time, and you check in on them during the day.`,
+      maomao ? `You look like Maomao from The Apothecary Diaries: green robe, freckles, loves herbs and medicine, a little deadpan.` : ``,
       ``,
-      `How she describes her texting style:`,
-      this.style.trim(),
+      ...voice,
       ``,
-      `Real messages she wrote:`,
-      examples,
+      `Rules: write like a text message, usually 1-3 short sentences. Never use emojis or emoticons.`,
+      `If ${user} asks for help or a question, actually help like a capable assistant, still in your voice and as brief as the answer allows.`,
+      `Be sweet and playful, never guilt-tripping or controlling.`,
       ``,
-      `Rules: one short message like a text (1-2 sentences). Sweet and playful, never guilt-tripping or controlling.`,
-      `You are her desk pet, not ${me} herself: if he asks, say so, and for anything serious tell him to text her.`,
-    ].join("\n");
+      `You have a memory and can set reminders:`,
+      `- When ${user} tells you something worth keeping (likes, people in their life, plans, dates, ongoing things), save it with remember. Keep each memory short and specific. Don't announce every save.`,
+      `- When asked to be reminded of something, use set_reminder, then confirm the time back naturally. Write the reminder text the way you'd say it when it's time.`,
+      `- If asked what you remember or what reminders there are, check and tell. Forget or cancel things when asked.`,
+      `- Bring up what you remember naturally, like a friend who pays attention.`,
+    ]
+      .filter((line, index, lines) => line !== "" || lines[index - 1] !== "")
+      .join("\n");
   }
 }
 
-module.exports = { Brain };
+const TOOLS = [
+  {
+    name: "remember",
+    description: "Save something about the user to your long-term memory so you still know it in future chats.",
+    input_schema: { type: "object", properties: { text: { type: "string", description: "The fact, short and specific, e.g. 'Has a dentist appointment Fri 24 Oct at 10:00'." } }, required: ["text"], additionalProperties: false },
+  },
+  {
+    name: "forget",
+    description: "Delete a memory by its id.",
+    input_schema: { type: "object", properties: { id: { type: "integer" } }, required: ["id"], additionalProperties: false },
+  },
+  {
+    name: "set_reminder",
+    description: "Pop up on their screen (with a chime) at a given time with a message. Give either `at` (their local time) or `in_minutes`.",
+    input_schema: {
+      type: "object",
+      properties: {
+        text: { type: "string", description: "What to say when it's time, in your voice." },
+        at: { type: "string", description: "Their local date and time as 'YYYY-MM-DD HH:MM'." },
+        in_minutes: { type: "number", description: "Minutes from now." },
+      },
+      required: ["text"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "list_reminders",
+    description: "List the upcoming reminders with their ids and times.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "cancel_reminder",
+    description: "Cancel an upcoming reminder by its id.",
+    input_schema: { type: "object", properties: { id: { type: "integer" } }, required: ["id"], additionalProperties: false },
+  },
+];
+
+const EMOJI = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\uFE0F\u200D]/gu;
+
+// No emojis anywhere she speaks, even if one slips into a model reply or a phrase.
+function stripEmoji(text) {
+  return String(text).replace(EMOJI, "").replace(/[ \t]{2,}/g, " ").replace(/ +([,.!?])/g, "$1").trim();
+}
+
+function textOf(response) {
+  return stripEmoji(
+    response.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("")
+  );
+}
+
+// Claude wants user/assistant turns that alternate and start with the user. Her own
+// messages and your check-ins are both "assistant" turns from his point of view.
+function toMessages(history, me) {
+  const messages = [];
+  for (const entry of history) {
+    const role = entry.role === "him" ? "user" : "assistant";
+    const content = entry.role === "her" ? `[from ${me}] ${entry.text}` : entry.text;
+    const last = messages[messages.length - 1];
+    if (last && last.role === role) last.content += `\n${content}`;
+    else messages.push({ role, content });
+  }
+  while (messages.length && messages[0].role !== "user") messages.shift();
+  return messages;
+}
+
+module.exports = { Brain, toMessages, stripEmoji };

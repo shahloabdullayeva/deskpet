@@ -29,7 +29,6 @@
     "files": [
       "src/**",
       "electron/**",
-      "setup/**",
       "me.example/**",
       "package.json"
     ],
@@ -49,13 +48,6 @@
     "portable": {
       "artifactName": "Maomao-Portable.exe"
     },
-    "fileAssociations": [
-      {
-        "ext": "maomao",
-        "name": "Maomao setup",
-        "description": "Maomao desk pet setup"
-      }
-    ],
     "publish": null
   }
 }

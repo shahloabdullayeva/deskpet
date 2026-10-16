@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, nativeImage, screen } = require("electron");
+const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, screen } = require("electron");
 
 // The installed app keeps your settings in its own user folder, so nothing needs editing by hand.
 const HOME = path.join(app.getPath("userData"), "me");
@@ -8,7 +8,7 @@ process.env.DESKPET_HOME ||= HOME;
 process.env.DESKPET_DATA ||= path.join(app.getPath("userData"), "data");
 
 const { Deskpet } = require("../src/deskpet");
-const setupFile = require("../src/setup-file");
+const settings = require("../src/settings");
 
 const WIDTH = 280;
 const HEIGHT = 400;
@@ -20,37 +20,36 @@ let pet;
 let muted = false;
 let hiddenUntil = 0;
 let walkTimer;
+let chatWin;
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
-function setupArg(argv) {
-  return argv.slice(1).find((arg) => arg.toLowerCase().endsWith(".maomao") && fs.existsSync(arg));
-}
+// Settings live in a window inside the app; saving restarts her with the new settings.
+let settingsWin;
 
-function installSetup(file) {
-  try {
-    setupFile.install(file, process.env.DESKPET_HOME);
-    if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: true });
-    app.relaunch({ args: process.argv.slice(1).filter((arg) => !arg.toLowerCase().endsWith(".maomao")) });
-    app.exit(0);
-  } catch (error) {
-    dialog.showErrorBox("Couldn't load the setup file", error.message);
-  }
-}
-
-async function chooseSetup() {
-  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-    title: "Load the setup file from her",
-    filters: [{ name: "Maomao setup", extensions: ["maomao", "json"] }],
-    properties: ["openFile"],
+function openSettings() {
+  if (settingsWin && !settingsWin.isDestroyed()) return settingsWin.focus();
+  settingsWin = new BrowserWindow({
+    width: 440,
+    height: 720,
+    minWidth: 380,
+    frame: false,
+    title: "Settings",
+    icon: ICON,
+    alwaysOnTop: true,
+    webPreferences: { preload: path.join(__dirname, "settings-preload.js") },
   });
-  if (!canceled && filePaths[0]) installSetup(filePaths[0]);
+  settingsWin.loadFile(path.join(__dirname, "settings.html"));
 }
 
-function openSetupPage() {
-  const page = new BrowserWindow({ width: 900, height: 900, title: "Maomao setup", autoHideMenuBar: true, icon: ICON });
-  page.loadFile(path.join(__dirname, "..", "setup", "index.html"));
-}
+ipcMain.handle("settings:read", () => settings.read(process.env.DESKPET_HOME));
+ipcMain.handle("settings:save", (_event, form) => {
+  settings.write(process.env.DESKPET_HOME, form);
+  if (app.isPackaged && pet?.isExample) app.setLoginItemSettings({ openAtLogin: true });
+  app.relaunch();
+  app.exit(0);
+});
+ipcMain.on("settings:close", () => settingsWin?.close());
 
 function look() {
   const dir = path.join(pet.dir, "character");
@@ -119,38 +118,72 @@ function walk(dx) {
   }, 16);
 }
 
+// The chat opens next to her, on whichever side of the screen has room.
+function placeChat() {
+  const [x, y] = win.getPosition();
+  const area = screen.getDisplayNearestPoint({ x, y }).workArea;
+  const [width, height] = chatWin.getSize();
+  const left = x - width + 30 >= area.x ? x - width + 30 : x + WIDTH - 30;
+  const top = Math.max(area.y, Math.min(y + HEIGHT - height - 40, area.y + area.height - height));
+  chatWin.setPosition(Math.round(Math.min(left, area.x + area.width - width)), Math.round(top));
+}
+
+function openChat() {
+  if (!chatWin || chatWin.isDestroyed()) {
+    chatWin = new BrowserWindow({
+      width: 360,
+      height: 520,
+      minWidth: 300,
+      minHeight: 360,
+      frame: false,
+      show: false,
+      alwaysOnTop: true,
+      title: pet.config.petName,
+      icon: ICON,
+      webPreferences: { preload: path.join(__dirname, "chat-preload.js") },
+    });
+    chatWin.loadFile(path.join(__dirname, "chat.html"));
+    chatWin.once("ready-to-show", () => chatWin.show());
+  } else {
+    chatWin.show();
+  }
+  placeChat();
+  chatWin.focus();
+}
+
+function toggleChat() {
+  if (chatWin && !chatWin.isDestroyed() && chatWin.isVisible()) chatWin.hide();
+  else openChat();
+}
+
+function lists() {
+  const memory = pet.memory;
+  return {
+    memories: memory.memories.map((m) => ({ id: m.id, text: m.text })),
+    reminders: memory.reminders.map((r) => ({ id: r.id, text: r.text, when: memory.format(r.due) })),
+  };
+}
+
 function menu() {
   const quietFor = (minutes) => () => (hiddenUntil = Date.now() + minutes * 60_000);
   return Menu.buildFromTemplate([
-    { label: `${pet.config.petName} 🌿`, enabled: false },
+    { label: pet.config.petName, enabled: false },
     { type: "separator" },
+    { label: `Chat with ${pet.config.petName}`, click: openChat },
     { label: "Show / hide", click: () => (win.isVisible() ? win.hide() : win.show()) },
     { label: "Mute chime", type: "checkbox", checked: muted, click: () => (muted = !muted) },
     { label: "Quiet for 1 hour (in a meeting)", click: quietFor(60) },
     { label: "Start with my computer", type: "checkbox", checked: app.getLoginItemSettings().openAtLogin, click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }) },
     { type: "separator" },
-    { label: "Load setup file…", click: chooseSetup },
-    { label: "Make a setup file…", click: openSetupPage },
+    { label: "Settings…", click: openSettings },
     { type: "separator" },
     { label: "Quit", click: () => app.quit() },
   ]);
 }
 
-app.on("second-instance", (_event, argv) => {
-  const file = setupArg(argv);
-  if (file) installSetup(file);
-  else win?.show();
-});
-app.on("open-file", (event, file) => {
-  event.preventDefault();
-  if (app.isReady()) installSetup(file);
-  else process.argv.push(file);
-});
+app.on("second-instance", () => win?.show());
 
 app.whenReady().then(() => {
-  const file = setupArg(process.argv);
-  if (file) return installSetup(file);
-
   app.dock?.hide();
   pet = new Deskpet();
   createWindow();
@@ -165,21 +198,46 @@ app.whenReady().then(() => {
     send("say", { text, mood, chime: chime && !muted && pet.config.pet?.sound !== false });
   });
   pet.events.on("mood", (mood) => send("mood", mood));
+  pet.events.on("chat", (entry) => {
+    if (chatWin && !chatWin.isDestroyed()) chatWin.webContents.send("chat:add", entry);
+  });
+
+  ipcMain.handle("chat:info", () => ({
+    me: pet.config.me,
+    him: pet.config.him,
+    petName: pet.config.petName,
+    online: Boolean(pet.brain.client),
+    forwarded: Boolean(pet.telegram && pet.config.telegram?.forwardHisMessagesToMe && pet.state.me),
+    history: pet.desk.slice(-100),
+  }));
+  ipcMain.handle("chat:send", async (_event, text) => {
+    send("flash", "talk");
+    const reply = await pet.deskChat(String(text).slice(0, 2000));
+    send("flash", "happy");
+    return reply;
+  });
+  ipcMain.handle("chat:lists", lists);
+  ipcMain.handle("chat:forget", (_event, id) => (pet.memory.forget(id), lists()));
+  ipcMain.handle("chat:cancel", (_event, id) => (pet.memory.cancel(id), lists()));
+  ipcMain.on("chat:close", () => chatWin?.hide());
 
   ipcMain.on("ready", () => {
     send("look", look());
     send("mood", pet.mood || "idle");
-    if (pet.isExample) {
-      setTimeout(() => send("say", { text: `Hi! I'm ${pet.config.petName} 🌿 Double-click the .maomao file she sent you, or right-click me → Load setup file.`, mood: "happy" }), 1500);
-    }
+    if (pet.isExample) setTimeout(openSettings, 800);
   });
-  ipcMain.on("tap", () => pet.tap().catch((error) => console.error("[tap]", error)));
+  ipcMain.on("tap", () => {
+    send("flash", "happy");
+    toggleChat();
+  });
+  ipcMain.on("open-chat", openChat);
   ipcMain.on("hover", (_event, over) => win.setIgnoreMouseEvents(!over, { forward: true }));
   ipcMain.on("walk", (_event, dx) => walk(dx));
   ipcMain.on("drag", (_event, { dx, dy }) => {
     clearInterval(walkTimer);
     const [x, y] = win.getPosition();
     win.setPosition(Math.round(x + dx), Math.round(y + dy));
+    if (chatWin && !chatWin.isDestroyed() && chatWin.isVisible()) placeChat();
   });
   ipcMain.on("menu", () => {
     tray.setContextMenu(menu());
