@@ -14,8 +14,17 @@
   </header>
   <main>
     <section>
-      <h2>About you</h2>
-      <label for="name">Your name</label>
+      <h2>Where she lives</h2>
+      <select id="mode">
+        <option value="desktop">On this computer's screen</option>
+        <option value="phone">On his phone (Telegram), running from this computer</option>
+      </select>
+      <p class="hint" id="mode-hint"></p>
+    </section>
+
+    <section>
+      <h2 id="about">About you</h2>
+      <label for="name" id="name-label">Your name</label>
       <input id="name" type="text" placeholder="What should she call you?">
       <div class="two">
         <div><label for="petName">Her name</label><input id="petName" type="text"></div>

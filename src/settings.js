@@ -43,6 +43,7 @@ function read(home) {
     sound: config.pet?.sound !== false,
     wander: config.pet?.wander !== false,
     background: config.pet?.background || "black",
+    mode: config.pet?.mode === "phone" ? "phone" : "desktop",
     chatterMinutes: String([0, 90, 45, 20].reduce((best, option) => (Math.abs(option - (config.pet?.chatterMinutes ?? 45)) < Math.abs(best - (config.pet?.chatterMinutes ?? 45)) ? option : best))),
     anthropicKey: secrets.anthropicKey || "",
     telegramToken: secrets.telegramToken || "",
@@ -67,6 +68,7 @@ function write(home, form) {
     sound: form.sound !== false,
     wander: form.wander !== false,
     background: form.background === "none" ? "none" : "black",
+    mode: form.mode === "phone" ? "phone" : "desktop",
     chatterMinutes: Number(form.chatterMinutes) || 0,
   };
 

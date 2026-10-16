@@ -143,7 +143,12 @@ class Deskpet {
   }
 
   get petRunning() {
-    return this.events.listenerCount("say") > 0;
+    return this.events.listenerCount("say") > 0 && !this.phone;
+  }
+
+  // Phone mode: no character on a screen; everything she says goes to his Telegram.
+  get phone() {
+    return this.config.pet?.mode === "phone";
   }
 
   start({ bot = true } = {}) {
@@ -187,6 +192,7 @@ class Deskpet {
 
   // Compose a line, show it on the desk (with a chime unless quiet) and/or send it on Telegram.
   async say(kind, context = {}, { chatId, replyTo, pet = true, chime = true } = {}) {
+    if (this.phone && !chatId && kind !== "tap") chatId = this.state.him?.chatId;
     const line = await this.brain.write(kind, context);
     const text = stripEmoji(line.text);
     if (pet) {
@@ -236,7 +242,7 @@ class Deskpet {
     }
 
     const chatter = (this.config.pet?.chatterMinutes || 0) * 60_000;
-    if (chatter && mood === "idle" && this.petRunning && Date.now() - this.lastChatter > chatter) {
+    if (chatter && mood === "idle" && (this.petRunning || (this.phone && this.state.him)) && Date.now() - this.lastChatter > chatter) {
       this.lastChatter = Date.now();
       await this.say("chatter", { memory: this.tools().context() });
     }
@@ -296,7 +302,12 @@ class Deskpet {
       }
       this.state[who] = { userId: message.from.id, chatId, name: message.from.first_name };
       this.saveState();
-      return this.telegram.sendText(chatId, who === "me" ? "Got you. I'll tell you when he talks to me." : `Hi ${this.config.him}, I'll keep you company at work.`);
+      if (who === "me") return this.telegram.sendText(chatId, "Got you. I'll tell you when he talks to me.");
+      const host = this.config.me ? `${this.config.me}'s` : "your partner's";
+      return this.telegram.sendText(
+        chatId,
+        `Hi ${this.config.him}, I'm ${this.config.petName}. Talk to me any time: I'll remember things, set reminders and check in on you.\n\nJust so you know: I run on ${host} computer, so they can see our chats.`
+      );
     }
 
     if (!isMe) return;

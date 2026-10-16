@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const CHECKINS = { morning: "Good morning", howsYourDay: "How's your day", lunch: "Lunch reminder", water: "Drink water", goodbye: "Home time" };
-const FIELDS = ["name", "petName", "character", "background", "chatterMinutes", "anthropicKey", "talksLike", "style", "start", "end", "timezone", "telegramToken"];
+const FIELDS = ["mode", "name", "petName", "character", "background", "chatterMinutes", "anthropicKey", "talksLike", "style", "start", "end", "timezone", "telegramToken"];
 let form;
 
 function fill(values) {
@@ -51,6 +51,10 @@ function collect() {
 }
 
 $("save").addEventListener("click", async () => {
+  if ($("mode").value === "phone" && !$("telegramToken").value.trim()) {
+    $("saved").textContent = "Phone mode needs a Telegram bot token.";
+    return;
+  }
   $("save").disabled = true;
   $("saved").textContent = "Saving…";
   await window.settings.save(collect());
@@ -58,7 +62,21 @@ $("save").addEventListener("click", async () => {
 $("cancel").addEventListener("click", () => window.settings.close());
 $("close").addEventListener("click", () => window.settings.close());
 
+// Phone mode needs a Telegram bot, and the work day and time zone are his.
+function showMode() {
+  const phone = $("mode").value === "phone";
+  $("about").textContent = phone ? "About him" : "About you";
+  $("name-label").textContent = phone ? "His name" : "Your name";
+  $("name").placeholder = phone ? "What should she call him?" : "What should she call you?";
+  $("mode-hint").textContent = phone
+    ? "Keep this computer on and online during his day. Fill in the Telegram bot token below, and use his work hours and his time zone. He sends the bot the pair code once; his chats are saved on this computer."
+    : "She sits on this screen. Telegram below is optional.";
+  document.querySelector("#telegramToken").closest("section").querySelector("h2").textContent = phone ? "Telegram (needed)" : "Telegram (optional)";
+}
+$("mode").addEventListener("change", showMode);
+
 window.settings.read().then((values) => {
   fill(values);
+  showMode();
   if (!values.name) $("sub").textContent = "Welcome! Fill this in once and she's ready.";
 });

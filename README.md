@@ -37,6 +37,20 @@ the same app without installing.
 - **Feelings:** happy after you talk to her, a bit lonely if you ignore her for hours, sleepy
   after work. Her face shows it and the chat says how she's feeling.
 
+## On a phone instead (Telegram)
+
+For a computer where nothing can be installed (like a work laptop), she can live in Telegram:
+
+1. Install Maomao on a computer that stays on during the day (your own laptop, not the work one).
+2. In Telegram, open **@BotFather**, send `/newbot`, and copy the token it gives you.
+3. In Settings choose **Where she lives: On his phone (Telegram)**, fill in his name, his work
+   hours and time zone, the Claude API key and the bot token, then **Save**.
+4. He opens the bot on his phone and sends `/pair <code> him` (the code is shown in Settings).
+
+From then on her check-ins, reminders, casual messages and chats all happen in his Telegram.
+She only runs while that computer is on and online, and the chats are saved on it (she tells
+him that when he pairs).
+
 ## Settings
 
 - **Your name**, her name and look (Maomao or cat-girl).
