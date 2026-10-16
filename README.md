@@ -16,62 +16,74 @@ work screen, talks like you, and checks in on him on Telegram.
   looks around, sniffs her herbs, yawns, stretches, dangles when he drags her, hops when poked,
   gives him the deadpan stare when he forgets to reply, and dozes off after work.
 
-## Setting it up (no coding)
+## How to use it
 
-Everything is on the download page:
+Everything starts from one download page:
 **[github.com/shahloabdullayeva/deskpet/releases/latest](https://github.com/shahloabdullayeva/deskpet/releases/latest)**
 
-### You (5 minutes)
+### What you do (once, about 10 minutes)
 
-1. Download **Maomao-Setup-Page.html** and open it in Chrome or Edge.
-2. Fill it in: names, his work hours, when she checks in, and her lines in your words.
-3. *(Optional)* Telegram bot: in Telegram open **@BotFather** → `/newbot` → copy the token into
-   the page. Then `/setprivacy` → your bot → **Disable**. Skip it and she lives only on his desk
-   (see below).
-4. Press **Download setup file** and send **maomao-setup.maomao** to him privately
-   (it contains your bot token).
+1. On that page, click **Maomao-Setup-Page.html** to download it, then open it (it opens in
+   Chrome or Edge).
+2. Fill it in from top to bottom:
+   - **You two:** your name and what you call him.
+   - **His work day:** when he starts and finishes, and the times Maomao checks on him.
+   - **What she says:** change the example lines to how *you* actually text him. This is the
+     part that makes her feel like you.
+   - **Telegram:** skip it for now. You can add it later.
+3. Click **⬇ Download setup file**. You get a file called **maomao-setup.maomao**.
+4. Send him two things: that file, and the download page link.
 
-### Him (2 minutes)
+### What he does (once, about 2 minutes)
 
-1. Download **Maomao-Setup.exe** from the same page and run it. It installs just for him,
-   so it needs no admin rights.
-   If Windows says *"Windows protected your PC"*: **More info → Run anyway** (the app isn't
-   code-signed).
-2. Double-click the **maomao-setup.maomao** file you sent. Maomao appears in the corner of the
-   screen and will start with Windows from now on.
+1. On the download page, click **Maomao-Setup.exe** and run it.
+   If Windows says *"Windows protected your PC"*, click **More info**, then **Run anyway**.
+   That's normal for small apps made by people instead of big companies.
+2. Double-click the **maomao-setup.maomao** file she sent.
+3. Maomao appears in the bottom corner of the screen and opens by herself every time the
+   computer turns on.
 
-> Office PC locked down? Use **Maomao-Portable.exe** instead (no install at all): run it,
-> right-click Maomao → **Load setup file…**. Check that your company allows small apps like
-> this, and that Telegram isn't blocked on the office network.
+If the work computer won't allow installing, download **Maomao-Portable.exe** instead, run it,
+right-click Maomao and pick **Load setup file…**
 
-### Without a Telegram bot
+### Every day (he doesn't have to do anything)
 
-Leave the bot token empty and everything happens on his screen only:
+- At the times you chose, she says your lines in a little bubble with a soft *ding*.
+- **Click her:** she reacts with one of your "poke" lines.
+- **Drag her:** move her anywhere on the screen.
+- **Right-click her** (or the tray icon by the clock): **Mute chime**, **Quiet for 1 hour**
+  (meetings), show/hide, start with Windows, load setup file, **Quit**.
+- Now and then she walks around, sniffs her herbs or yawns. After work she falls asleep.
 
-| | Without a bot | With a bot |
+### Changing something later
+
+Open the setup page, click **Open a setup file to change it…**, pick your
+`maomao-setup.maomao`, change what you want and download it again. Send him the new file; he
+double-clicks it. That's it.
+
+## Optional: Telegram
+
+Without Telegram, everything happens on his screen only. With a Telegram bot you also get:
+
+| | Without | With Telegram |
 |---|---|---|
-| Check-ins on his desk, with a chime | ✅ | ✅ |
+| Check-ins on his screen, with a chime | ✅ | ✅ |
 | Pokes, walking, herbs, all her moves | ✅ | ✅ |
 | Check-ins also sent to his Telegram | — | ✅ |
-| "You said checking 👀" reminders | — | ✅ (needs to see your group chat) |
-| You send messages to his desk | — | ✅ |
-| He talks to her, you get his messages | — | ✅ |
+| "You said checking 👀" reminders in your group chat | — | ✅ |
+| You send messages to his screen from your phone | — | ✅ |
+| He talks to her, and you get his messages | — | ✅ |
 
-You can add a bot any time later: put the token in the setup page and send him the new file.
+To add it:
 
-### Then, together (only with a bot)
+1. In Telegram open **@BotFather**, send `/newbot`, pick a name, and copy the token it gives you.
+2. Still in BotFather: `/setprivacy` → your bot → **Disable** (so she can see "checking").
+3. Put the token in the setup page, download the file again and send it to him (privately,
+   since it has the token in it). He double-clicks it.
+4. You send the bot `/pair <code> me`, he sends `/pair <code> him` (the code is on the setup page).
+5. Add the bot to a group with the two of you. Try `/test howsYourDay` and `/test checking`.
 
-- You send the bot `/pair <code> me`, he sends `/pair <code> him` (the code is on the setup page).
-- Add the bot to a group with the two of you.
-- Try `/test howsYourDay` and `/test checking`.
-
-To change anything later, open the setup page → **Open a setup file to change it…**, edit, and
-send him the new file. He just double-clicks it again.
-
-### His controls
-
-Right-click Maomao (or the tray icon by the clock): mute the chime, quiet for 1 hour (meetings),
-show/hide, start with Windows, load setup file, quit. Drag her anywhere.
+> Some offices block Telegram on their network. If nothing arrives, that's probably why.
 
 ## Making her look exactly like Maomao
 
