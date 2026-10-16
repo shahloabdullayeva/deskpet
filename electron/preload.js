@@ -10,6 +10,6 @@ contextBridge.exposeInMainWorld("pet", {
   hop: () => ipcRenderer.send("hop"),
   menu: () => ipcRenderer.send("menu"),
   on: (channel, callback) => {
-    if (["say", "mood", "look", "walked", "flash", "hopped"].includes(channel)) ipcRenderer.on(channel, (_event, payload) => callback(payload));
+    if (["say", "mood", "look", "walked", "flash", "hopped", "pinned", "call"].includes(channel)) ipcRenderer.on(channel, (_event, payload) => callback(payload));
   },
 });

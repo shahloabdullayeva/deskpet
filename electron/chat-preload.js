@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld("chat", {
   cancel: (id) => ipcRenderer.invoke("chat:cancel", id),
   close: () => ipcRenderer.send("chat:close"),
   onAdd: (callback) => ipcRenderer.on("chat:add", (_event, entry) => callback(entry)),
+  onFeeling: (callback) => ipcRenderer.on("chat:feeling", (_event, feeling) => callback(feeling)),
 });

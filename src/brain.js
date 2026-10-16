@@ -9,8 +9,15 @@ const TASKS = {
   tap: () => "They just poked you on their screen. React cutely.",
   chatter: (context) =>
     `Send one short casual message out of nowhere, like a friend texting during the day: ask how something you remember is going, comment on the time of day, or say something small and sweet. One or two short sentences.\n\n${context.memory || ""}`,
+  afterCall: (context) =>
+    `They just finished a work call of about ${context.minutes} minutes. Casually ask how it went, for example whether things got settled. One short sentence.`,
   checking: (context) =>
     `They wrote "${context.text}" about ${context.minutes} minutes ago and then went quiet. Playfully remind them they said they would check and still have not replied.`,
+};
+
+// Lines for moments added after a setup was made, so older installs still have something to say.
+const FALLBACK = {
+  afterCall: [{ text: "how did the call go? did it get settled?" }, { text: "call's done. everything okay?" }, { text: "that was a long one. how did it go?" }],
 };
 
 class Brain {
@@ -25,7 +32,7 @@ class Brain {
   }
 
   pick(kind) {
-    const lines = (this.phrases[kind] || []).filter((line) => line && line.text);
+    const lines = (this.phrases[kind] || FALLBACK[kind] || []).filter((line) => line && line.text);
     if (!lines.length) return { text: "hi" };
     let index = Math.floor(Math.random() * lines.length);
     if (lines.length > 1 && index === this.last[kind]) index = (index + 1) % lines.length;
@@ -36,7 +43,7 @@ class Brain {
   // Your own phrases by default; Claude only for the kinds listed in
   // config.brain.useClaudeFor, falling back to your phrases if it fails.
   async write(kind, context = {}) {
-    if (!this.client || !(this.claudeFor.includes(kind) || kind === "chatter")) return this.pick(kind);
+    if (!this.client || !(this.claudeFor.includes(kind) || ["chatter", "afterCall"].includes(kind))) return this.pick(kind);
     try {
       const messages =
         kind === "reply"

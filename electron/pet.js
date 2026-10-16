@@ -10,6 +10,7 @@ let face = "idle";
 let images = {};
 let volume = 0.7;
 let wander = true;
+let pinned = false;
 let talking = false;
 let walking = false;
 let hovered = false;
@@ -112,8 +113,8 @@ function live() {
   setTimeout(live, 12000 + Math.random() * 25000);
   if (talking || walking || hovered || face !== "idle" || document.hidden) return;
   const roll = Math.random();
-  if (wander && roll < 0.12) return hop();
-  if (wander && roll < 0.4) return walk();
+  if (wander && !pinned && roll < 0.12) return hop();
+  if (wander && !pinned && roll < 0.4) return walk();
   const names = Object.keys(ACTIONS);
   act(names[Math.floor(Math.random() * names.length)]);
 }
@@ -173,6 +174,12 @@ window.pet.on("flash", (mood) => {
   clearTimeout(flashTimer);
   setFace(mood);
   flashTimer = setTimeout(() => !talking && setFace(base), mood === "talk" ? 8000 : 1600);
+});
+
+window.pet.on("pinned", (value) => (pinned = value));
+window.pet.on("call", (on) => {
+  document.getElementById("badge").hidden = !on;
+  if (on) stopTalking();
 });
 
 window.pet.on("hopped", () => {

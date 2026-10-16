@@ -9,6 +9,10 @@ const { Telegram } = require("./telegram");
 const { Brain, stripEmoji } = require("./brain");
 const { Memory } = require("./memory");
 
+// How she feels shows on her face: lonely looks pouty, sleepy after work, otherwise her usual self.
+const FACES = { sleepy: "sleepy", lonely: "pout", happy: "idle", calm: "idle" };
+const LONELY_AFTER_MINUTES = 150;
+
 const MOODS = { tap: "happy", reply: "happy", goodbye: "happy", morning: "happy", checking: "pout" };
 
 class Deskpet {
@@ -29,6 +33,37 @@ class Deskpet {
     this.state = this.readState();
     this.mood = null;
     this.lastChatter = Date.now();
+    this.feeling = null;
+    this.startedAt = Date.now();
+  }
+
+  // happy right after he talks to her, lonely when he hasn't in a long while, sleepy off work.
+  feel(parts = this.now()) {
+    if (!isWorkTime(parts, this.config.workHours)) return { feeling: "sleepy", why: "it's outside work hours" };
+    const minutes = Math.round((Date.now() - Math.max(this.state.lastTalk || 0, this.startedAt)) / 60_000);
+    if (this.state.lastTalk && Date.now() - this.state.lastTalk < 20 * 60_000) return { feeling: "happy", why: "you just talked" };
+    if (minutes >= LONELY_AFTER_MINUTES) return { feeling: "lonely", why: `nobody has talked to you for about ${Math.round(minutes / 60)} hours` };
+    return { feeling: "calm", why: "a normal moment of the day" };
+  }
+
+  updateFeeling() {
+    const { feeling } = this.feel();
+    if (feeling !== this.feeling) {
+      this.feeling = feeling;
+      this.events.emit("feeling", feeling);
+    }
+    const mood = FACES[feeling];
+    if (mood !== this.mood) this.events.emit("mood", (this.mood = mood));
+  }
+
+  touch() {
+    this.state.lastTalk = Date.now();
+    this.saveState();
+    this.updateFeeling();
+  }
+
+  afterCall(minutes) {
+    return this.say("afterCall", { minutes });
   }
 
   readState() {
@@ -60,6 +95,7 @@ class Deskpet {
   // He talks to her, on his screen or on Telegram; both share one conversation and one memory.
   async deskChat(text) {
     this.addToChat("him", text);
+    this.touch();
     if (this.telegram && this.config.telegram?.forwardHisMessagesToMe && this.state.me?.chatId) {
       this.telegram.sendText(this.state.me.chatId, `${this.config.him} told ${this.config.petName}: ${text}`).catch(() => {});
     }
@@ -75,12 +111,13 @@ class Deskpet {
         const parts = this.now();
         const day = new Date().toLocaleDateString("en-US", { weekday: "long", timeZone: this.config.timezone || undefined });
         return [
-          `Right now for him it is ${day} ${parts.date} ${parts.hhmm}${this.config.timezone ? ` (${this.config.timezone})` : ""}.`,
+          `Right now for them it is ${day} ${parts.date} ${parts.hhmm}${this.config.timezone ? ` (${this.config.timezone})` : ""}.`,
+          `You're feeling ${this.feel(parts).feeling} right now, because ${this.feel(parts).why}. Let it color how you talk a little, without making a big deal of it.`,
           ``,
-          `What you remember about him:`,
+          `What you remember about them:`,
           memory.memories.length ? memory.memories.map((m) => `- [${m.id}] ${m.text}`).join("\n") : "- (nothing yet)",
           ``,
-          `His upcoming reminders:`,
+          `Their upcoming reminders:`,
           memory.reminders.length ? memory.reminders.map((r) => `- [${r.id}] ${memory.format(r.due)}: ${r.text}`).join("\n") : "- (none)",
         ].join("\n");
       },
@@ -169,8 +206,8 @@ class Deskpet {
     const work = this.config.workHours;
     if (this.state.day !== parts.date) Object.assign(this.state, { day: parts.date, fired: [], nudges: 0 });
 
-    const mood = isWorkTime(parts, work) ? "idle" : "sleepy";
-    if (mood !== this.mood) this.events.emit("mood", (this.mood = mood));
+    this.updateFeeling();
+    const mood = this.feeling === "sleepy" ? "sleepy" : "idle";
 
     for (const checkin of this.config.checkins || []) {
       const key = `${checkin.time} ${checkin.kind}`;

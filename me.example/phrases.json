@@ -74,5 +74,13 @@
     {
       "text": "add a Claude API key in Settings so I can really talk to you"
     }
+  ],
+  "afterCall": [
+    {
+      "text": "how did the call go? did it get settled?"
+    },
+    {
+      "text": "call's done. everything okay?"
+    }
   ]
 }

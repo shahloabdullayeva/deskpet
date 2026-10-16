@@ -104,7 +104,9 @@ window.chat.info().then((info) => {
   document.title = info.petName;
   input.placeholder = `Message ${info.petName}…`;
   const status = document.getElementById("status");
-  status.textContent = info.online ? "online" : "offline, she can only use her saved lines";
+  const showFeeling = (feeling) => (status.textContent = info.online ? `online, feeling ${feeling}` : "offline, she can only use her saved lines");
+  showFeeling(info.feeling);
+  window.chat.onFeeling(showFeeling);
   status.classList.toggle("off", !info.online);
   if (info.forwarded) {
     const note = document.getElementById("note");

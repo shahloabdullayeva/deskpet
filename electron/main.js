@@ -21,6 +21,23 @@ let muted = false;
 let hiddenUntil = 0;
 let walkTimer;
 let chatWin;
+let callStarted = 0;
+
+// Where she sits and whether she's pinned there, kept across restarts.
+const PLACE = path.join(app.getPath("userData"), "place.json");
+let place = {};
+try {
+  place = JSON.parse(fs.readFileSync(PLACE, "utf8"));
+} catch {}
+let saveTimer;
+function savePlace() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const [x, y] = win.getPosition();
+    place = { ...place, x, y };
+    fs.writeFileSync(PLACE, JSON.stringify(place));
+  }, 500);
+}
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
@@ -77,11 +94,12 @@ function look() {
 
 function createWindow() {
   const area = screen.getPrimaryDisplay().workArea;
+  const onScreen = Number.isFinite(place.x) && screen.getAllDisplays().some(({ workArea: a }) => place.x >= a.x - WIDTH / 2 && place.x <= a.x + a.width - WIDTH / 2 && place.y >= a.y - HEIGHT / 2 && place.y <= a.y + a.height - HEIGHT / 2);
   win = new BrowserWindow({
     width: WIDTH,
     height: HEIGHT,
-    x: area.x + area.width - WIDTH - 24,
-    y: area.y + area.height - HEIGHT,
+    x: onScreen ? place.x : area.x + area.width - WIDTH - 24,
+    y: onScreen ? place.y : area.y + area.height - HEIGHT,
     transparent: true,
     frame: false,
     resizable: false,
@@ -112,6 +130,7 @@ function walk(dx) {
     const [now] = win.getPosition();
     if (!step || Math.abs(target - now) <= Math.abs(step)) {
       clearInterval(walkTimer);
+      savePlace();
       send("walked");
       return;
     }
@@ -131,6 +150,7 @@ function hop() {
   const left = area.x + Math.round(Math.random() * Math.max(0, area.width - WIDTH));
   win.setPosition(left, area.y + area.height - HEIGHT);
   if (chatWin && !chatWin.isDestroyed() && chatWin.isVisible()) placeChat();
+  savePlace();
   send("hopped");
 }
 
@@ -180,6 +200,27 @@ function lists() {
   };
 }
 
+function pin(pinned) {
+  place = { ...place, pinned };
+  savePlace();
+  send("pinned", pinned);
+}
+
+// On a call she keeps quiet; afterwards she sometimes asks how it went.
+function startCall() {
+  callStarted = Date.now();
+  hiddenUntil = Infinity;
+  send("call", true);
+}
+
+function endCall() {
+  const minutes = Math.round((Date.now() - callStarted) / 60_000);
+  callStarted = 0;
+  hiddenUntil = 0;
+  send("call", false);
+  if (minutes >= 3 && Math.random() < 0.6) setTimeout(() => pet.afterCall(minutes).catch(() => {}), 20_000);
+}
+
 function menu() {
   const quietFor = (minutes) => () => (hiddenUntil = Date.now() + minutes * 60_000);
   return Menu.buildFromTemplate([
@@ -188,7 +229,11 @@ function menu() {
     { label: `Chat with ${pet.config.petName}`, click: openChat },
     { label: "Show / hide", click: () => (win.isVisible() ? win.hide() : win.show()) },
     { label: "Mute chime", type: "checkbox", checked: muted, click: () => (muted = !muted) },
+    callStarted
+      ? { label: "Call's over", click: endCall }
+      : { label: "I'm on a call", click: startCall },
     { label: "Quiet for 1 hour (in a meeting)", click: quietFor(60) },
+    { label: "Pin her here", type: "checkbox", checked: Boolean(place.pinned), click: (item) => pin(item.checked) },
     { label: "Start with my computer", type: "checkbox", checked: app.getLoginItemSettings().openAtLogin, click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }) },
     { type: "separator" },
     { label: "Settings…", click: openSettings },
@@ -214,6 +259,9 @@ app.whenReady().then(() => {
     send("say", { text, mood, chime: chime && !muted && pet.config.pet?.sound !== false });
   });
   pet.events.on("mood", (mood) => send("mood", mood));
+  pet.events.on("feeling", (feeling) => {
+    if (chatWin && !chatWin.isDestroyed()) chatWin.webContents.send("chat:feeling", feeling);
+  });
   pet.events.on("chat", (entry) => {
     if (chatWin && !chatWin.isDestroyed()) chatWin.webContents.send("chat:add", entry);
   });
@@ -223,6 +271,7 @@ app.whenReady().then(() => {
     him: pet.config.him,
     petName: pet.config.petName,
     online: Boolean(pet.brain.client),
+    feeling: pet.feeling || pet.feel().feeling,
     forwarded: Boolean(pet.telegram && pet.config.telegram?.forwardHisMessagesToMe && pet.state.me),
     history: pet.desk.slice(-100),
   }));
@@ -240,9 +289,11 @@ app.whenReady().then(() => {
   ipcMain.on("ready", () => {
     send("look", look());
     send("mood", pet.mood || "idle");
+    send("pinned", Boolean(place.pinned));
     if (pet.isExample) setTimeout(openSettings, 800);
   });
   ipcMain.on("tap", () => {
+    pet.touch();
     send("flash", "happy");
     toggleChat();
   });
@@ -255,6 +306,7 @@ app.whenReady().then(() => {
     const [x, y] = win.getPosition();
     win.setPosition(Math.round(x + dx), Math.round(y + dy));
     if (chatWin && !chatWin.isDestroyed() && chatWin.isVisible()) placeChat();
+    savePlace();
   });
   ipcMain.on("menu", () => {
     tray.setContextMenu(menu());

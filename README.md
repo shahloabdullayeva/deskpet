@@ -30,8 +30,12 @@ the same app without installing.
   Settings.
 - **Drag her** anywhere. Now and then she walks around, sniffs her herbs or yawns, and she
   falls asleep after work.
-- **Right-click her** (or the tray icon by the clock): Chat, Show/hide, Mute chime, Quiet for
-  1 hour, Settings, Start with Windows, Quit.
+- **Right-click her** (or the tray icon by the clock): Chat, Show/hide, Mute chime,
+  I'm on a call / Call's over (she stays quiet, then sometimes asks how it went), Quiet for
+  1 hour, Pin her here (no walking or hopping, and she stays put after restarts), Settings,
+  Start with Windows, Quit.
+- **Feelings:** happy after you talk to her, a bit lonely if you ignore her for hours, sleepy
+  after work. Her face shows it and the chat says how she's feeling.
 
 ## Settings
 
