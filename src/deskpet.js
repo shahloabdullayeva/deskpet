@@ -15,6 +15,7 @@ class Deskpet {
   constructor() {
     const loaded = load();
     this.dir = loaded.dir;
+    this.isExample = loaded.isExample;
     this.config = loaded.config;
     this.env = loaded.env;
     this.statePath = path.join(loaded.dataDir, "state.json");

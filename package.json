@@ -8,15 +8,54 @@
     "start": "electron .",
     "bot": "node src/bot.js",
     "learn": "node src/learn.js",
-    "test": "node --test"
+    "test": "node --test",
+    "dist": "electron-builder --win"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0"
   },
   "devDependencies": {
-    "electron": "^44.8.0"
+    "electron": "^44.8.0",
+    "electron-builder": "^26.15.3"
   },
   "engines": {
     "node": ">=20"
+  },
+  "productName": "Maomao",
+  "author": "deskpet",
+  "build": {
+    "appId": "io.github.shahloabdullayeva.deskpet",
+    "productName": "Maomao",
+    "files": [
+      "src/**",
+      "electron/**",
+      "setup/**",
+      "me.example/**",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "electron/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "Maomao-Setup.exe",
+      "shortcutName": "Maomao"
+    },
+    "portable": {
+      "artifactName": "Maomao-Portable.exe"
+    },
+    "fileAssociations": [
+      {
+        "ext": "maomao",
+        "name": "Maomao setup",
+        "description": "Maomao desk pet setup"
+      }
+    ],
+    "publish": null
   }
 }

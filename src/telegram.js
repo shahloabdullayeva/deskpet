@@ -25,8 +25,10 @@ class Telegram {
     return this.call("sendMessage", { chat_id: chatId, text, ...reply(replyTo) });
   }
 
-  // Telegram plays ogg/opus, mp3 and m4a as voice notes; anything else goes as an audio file.
+  // Telegram plays ogg/opus, mp3 and m4a as voice notes and wav as audio; webm recordings
+  // (from the setup page in Chrome) only play on his desk, so they go as plain text here.
   async sendSound(chatId, sound, caption, replyTo) {
+    if (sound.mime.includes("webm")) return this.sendText(chatId, caption, replyTo);
     const asVoice = /audio\/(ogg|mpeg|mp4)/.test(sound.mime);
     const form = new FormData();
     form.append("chat_id", String(chatId));

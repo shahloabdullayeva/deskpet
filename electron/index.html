@@ -13,9 +13,9 @@
     <svg id="drawn" viewBox="0 0 200 260" aria-hidden="true">
       <g class="body">
         <!-- cat-girl: tail, long hair, hoodie -->
-        <path class="hair tail cat-only" d="M150 228 Q190 215 182 180 Q178 168 170 176 Q175 205 146 214 Z"/>
-        <path class="hair cat-only" d="M38 105 Q30 38 100 30 Q170 38 162 105 L170 190 Q150 186 140 160 L60 160 Q50 186 30 190 Z"/>
         <g class="cat-only">
+          <path class="hair tail" d="M150 228 Q190 215 182 180 Q178 168 170 176 Q175 205 146 214 Z"/>
+          <path class="hair" d="M38 105 Q30 38 100 30 Q170 38 162 105 L170 190 Q150 186 140 160 L60 160 Q50 186 30 190 Z"/>
           <path class="outfit" d="M52 252 Q50 190 100 176 Q150 190 148 252 Z"/>
           <path class="outfit-dark" d="M84 182 L100 204 L116 182 Q108 178 100 178 Q92 178 84 182 Z"/>
           <path class="outfit-dark" d="M70 252 Q72 226 100 222 Q128 226 130 252 Z"/>
@@ -23,91 +23,134 @@
           <circle class="skin" cx="124" cy="230" r="11"/>
         </g>
 
-        <!-- Maomao: hair tied up in a bun, robe with crossed collar, sleeves, herb -->
+        <!-- Maomao: little bun at the back, long straight hair, green robe, maroon skirt -->
         <g class="maomao-only">
-          <ellipse class="hair" cx="100" cy="30" rx="27" ry="20"/>
-          <path class="hair-shine" d="M84 22 Q98 12 114 18 Q100 16 88 26 Z"/>
-          <path class="hair" d="M40 112 Q34 44 100 38 Q166 44 160 112 L156 150 L44 150 Z"/>
-          <path class="outfit" d="M48 254 Q46 192 100 178 Q154 192 152 254 Z"/>
-          <path class="collar" d="M86 180 L100 214 L114 180 Q107 177 100 177 Q93 177 86 180 Z"/>
-          <path class="outfit-dark" d="M80 183 L88 180 L114 238 L104 238 Z"/>
-          <path class="outfit-dark" d="M120 183 L112 180 L100 210 L104 218 Z"/>
-          <rect class="sash" x="58" y="222" width="84" height="14" rx="4"/>
-          <path class="sleeve" d="M50 254 Q50 222 72 214 Q100 226 128 214 Q150 222 150 254 Z"/>
-          <path class="outfit-dark" d="M70 236 Q100 246 130 236 L130 244 Q100 254 70 244 Z"/>
-          <path class="stem" d="M100 236 Q103 222 110 210"/>
-          <ellipse class="leaf" cx="110" cy="214" rx="7" ry="3.5" transform="rotate(-40 110 214)"/>
-          <ellipse class="leaf" cx="103" cy="222" rx="6" ry="3" transform="rotate(30 103 222)"/>
-          <ellipse class="leaf" cx="112" cy="206" rx="5" ry="2.6" transform="rotate(10 112 206)"/>
+          <ellipse class="hair" cx="100" cy="44" rx="20" ry="14"/>
+          <path class="hair" d="M42 112 Q36 46 100 42 Q164 46 158 112 Q164 160 154 190 L46 190 Q36 160 42 112 Z"/>
+          <path class="skirt" d="M56 236 L144 236 Q152 250 156 262 L44 262 Q48 250 56 236 Z"/>
+          <path class="skirt-fold" d="M84 240 Q82 252 80 262 M118 240 Q120 252 122 262"/>
+          <path class="outfit" d="M48 246 Q46 194 100 178 Q154 194 152 246 Z"/>
+          <path class="inner" d="M86 180 L100 204 L114 180 Q107 177 100 177 Q93 177 86 180 Z"/>
+          <path class="collar" d="M118 181 L110 178 L98 204 L103 210 Z"/>
+          <path class="collar" d="M80 182 L89 178 L124 238 L113 240 Z"/>
+          <path class="sleeve" d="M50 252 Q44 214 64 202 Q84 210 98 232 L97 252 Z"/>
+          <path class="sleeve" d="M150 252 Q156 214 136 202 Q116 210 102 232 L103 252 Z"/>
+          <path class="cuff" d="M82 230 L99 233 L98 254 L78 250 Z"/>
+          <path class="cuff" d="M118 230 L101 233 L102 254 L122 250 Z"/>
+          <ellipse class="skin" cx="100" cy="230" rx="11" ry="7"/>
+          <path class="finger" d="M93 229 Q100 233 107 229"/>
+
         </g>
         <rect class="skin" x="91" y="160" width="18" height="20" rx="6"/>
       </g>
       <g class="head">
-        <!-- cat ears -->
         <g class="cat-only">
           <path class="hair" d="M48 70 L52 18 L92 46 Z"/>
           <path class="hair" d="M152 70 L148 18 L108 46 Z"/>
           <path class="ear-inner" d="M56 58 L58 30 L82 47 Z"/>
           <path class="ear-inner" d="M144 58 L142 30 L118 47 Z"/>
         </g>
-        <ellipse class="skin" cx="100" cy="108" rx="60" ry="56"/>
-        <!-- bangs -->
+        <ellipse class="skin" cx="100" cy="110" rx="58" ry="55"/>
+
         <path class="hair cat-only" d="M40 112 Q36 42 100 40 Q164 42 160 112 Q154 84 140 74 Q136 96 116 86 Q110 102 96 86 Q84 100 72 78 Q58 88 40 112 Z"/>
-        <path class="hair maomao-only" d="M40 112 Q36 44 100 42 Q164 44 160 112 Q156 86 146 76 Q138 92 126 80 Q118 94 108 78 Q100 92 90 78 Q80 92 72 78 Q60 92 52 80 Q44 92 40 112 Z"/>
-        <path class="hair-shine" d="M66 60 Q90 48 118 52 Q96 54 74 66 Z"/>
-        <!-- side locks -->
-        <path class="hair" d="M40 100 Q34 150 48 172 Q54 140 52 112 Z"/>
-        <path class="hair" d="M160 100 Q166 150 152 172 Q146 140 148 112 Z"/>
+        <!-- Maomao: blunt straight bangs and a blue ribbon -->
+        <path class="hair maomao-only" d="M42 116 Q36 48 100 46 Q164 48 158 116 L152 116 L150 98 L138 96 L126 99 L114 96 L102 99 L90 96 L78 99 L66 96 L52 98 L48 116 Z"/>
+        <path class="hair-shine maomao-only" d="M58 70 Q100 56 142 70 L140 76 Q100 64 60 76 Z"/>
+        <path class="hair-shine cat-only" d="M66 60 Q90 48 118 52 Q96 54 74 66 Z"/>
+        <g class="maomao-only ribbon">
+          <path d="M99 45 Q84 20 74 30 Q70 42 84 46 Q92 48 99 47 Z"/>
+          <path d="M101 45 Q116 20 126 30 Q130 42 116 46 Q108 48 101 47 Z"/>
+          <path class="ribbon-dark" d="M80 32 Q86 38 96 44 M120 32 Q114 38 104 44"/>
+          <ellipse cx="100" cy="46" rx="5" ry="4.5"/>
+        </g>
+
+        <path class="hair cat-only" d="M40 100 Q34 150 48 172 Q54 140 52 112 Z"/>
+        <path class="hair cat-only" d="M160 100 Q166 150 152 172 Q146 140 148 112 Z"/>
+        <!-- Maomao: side locks ending in braids with beads -->
+        <g class="maomao-only">
+          <path class="hair" d="M42 104 Q36 150 44 182 L54 182 Q57 146 55 112 Z"/>
+          <path class="hair" d="M158 104 Q164 150 156 182 L146 182 Q143 146 145 112 Z"/>
+          <g class="braid left">
+            <circle class="bead red" cx="49" cy="185" r="4.2"/>
+            <ellipse class="hair" cx="49" cy="194" rx="5" ry="6"/>
+            <ellipse class="hair" cx="49" cy="205" rx="4.6" ry="5.6"/>
+            <ellipse class="hair" cx="49" cy="215" rx="4" ry="5"/>
+            <circle class="bead teal" cx="49" cy="223" r="4"/>
+            <path class="hair" d="M46 226 L49 236 L52 226 Z"/>
+          </g>
+          <g class="braid right">
+            <circle class="bead red" cx="151" cy="185" r="4.2"/>
+            <ellipse class="hair" cx="151" cy="194" rx="5" ry="6"/>
+            <ellipse class="hair" cx="151" cy="205" rx="4.6" ry="5.6"/>
+            <ellipse class="hair" cx="151" cy="215" rx="4" ry="5"/>
+            <circle class="bead teal" cx="151" cy="223" r="4"/>
+            <path class="hair" d="M148 226 L151 236 L154 226 Z"/>
+          </g>
+        </g>
 
         <g class="eyes open-eyes">
           <g class="eye">
-            <ellipse class="white" cx="76" cy="116" rx="13" ry="16"/>
-            <ellipse class="iris" cx="77" cy="118" rx="10.5" ry="13.5"/>
-            <ellipse class="pupil" cx="77" cy="121" rx="5" ry="7"/>
-            <circle class="shine" cx="81" cy="111" r="4.2"/>
-            <circle class="shine" cx="73" cy="125" r="2"/>
-            <path class="lash cat-only" d="M60 106 Q76 92 93 104 L92 108 Q76 98 62 110 Z"/>
-            <path class="skin maomao-only" d="M58 92 L95 92 L95 109 Q76 103 59 111 Z"/>
-            <path class="lid maomao-only" d="M60 111 Q76 102 93 109"/>
+            <ellipse class="white" cx="76" cy="118" rx="13" ry="15"/>
+            <g class="gaze">
+              <ellipse class="iris" cx="77" cy="120" rx="10.5" ry="13"/>
+              <ellipse class="iris-light" cx="77" cy="126" rx="7" ry="5"/>
+              <ellipse class="pupil" cx="77" cy="121" rx="4.6" ry="6.5"/>
+              <circle class="shine" cx="81" cy="113" r="4"/>
+              <circle class="shine" cx="73" cy="127" r="1.8"/>
+            </g>
+            <path class="lash cat-only" d="M60 108 Q76 94 93 106 L92 110 Q76 100 62 112 Z"/>
+            <path class="skin maomao-only" d="M58 96 L95 96 L95 106 Q76 103 59 108 Z"/>
+            <path class="lid maomao-only" d="M61 108 Q76 103 92 106"/>
           </g>
           <g class="eye">
-            <ellipse class="white" cx="124" cy="116" rx="13" ry="16"/>
-            <ellipse class="iris" cx="123" cy="118" rx="10.5" ry="13.5"/>
-            <ellipse class="pupil" cx="123" cy="121" rx="5" ry="7"/>
-            <circle class="shine" cx="127" cy="111" r="4.2"/>
-            <circle class="shine" cx="119" cy="125" r="2"/>
-            <path class="lash cat-only" d="M140 106 Q124 92 107 104 L108 108 Q124 98 138 110 Z"/>
-            <path class="skin maomao-only" d="M142 92 L105 92 L105 109 Q124 103 141 111 Z"/>
-            <path class="lid maomao-only" d="M140 111 Q124 102 107 109"/>
+            <ellipse class="white" cx="124" cy="118" rx="13" ry="15"/>
+            <g class="gaze">
+              <ellipse class="iris" cx="123" cy="120" rx="10.5" ry="13"/>
+              <ellipse class="iris-light" cx="123" cy="126" rx="7" ry="5"/>
+              <ellipse class="pupil" cx="123" cy="121" rx="4.6" ry="6.5"/>
+              <circle class="shine" cx="127" cy="113" r="4"/>
+              <circle class="shine" cx="119" cy="127" r="1.8"/>
+            </g>
+            <path class="lash cat-only" d="M140 108 Q124 94 107 106 L108 110 Q124 100 138 112 Z"/>
+            <path class="skin maomao-only" d="M142 96 L105 96 L105 106 Q124 103 141 108 Z"/>
+            <path class="lid maomao-only" d="M139 108 Q124 103 108 106"/>
           </g>
         </g>
         <g class="eyes happy-eyes">
-          <path class="line" d="M64 120 Q76 104 88 120"/>
-          <path class="line" d="M112 120 Q124 104 136 120"/>
+          <path class="line" d="M64 122 Q76 106 88 122"/>
+          <path class="line" d="M112 122 Q124 106 136 122"/>
         </g>
         <g class="eyes sleepy-eyes">
-          <path class="line" d="M64 118 Q76 126 88 118"/>
-          <path class="line" d="M112 118 Q124 126 136 118"/>
+          <path class="line" d="M64 120 Q76 128 88 120"/>
+          <path class="line" d="M112 120 Q124 128 136 120"/>
         </g>
         <g class="eyes pout-eyes">
-          <path class="line" d="M64 114 L88 120"/>
-          <path class="line" d="M136 114 L112 120"/>
-          <ellipse class="iris" cx="77" cy="125" rx="7" ry="6"/>
-          <ellipse class="iris" cx="123" cy="125" rx="7" ry="6"/>
+          <path class="line" d="M62 114 L90 117"/>
+          <path class="line" d="M138 114 L110 117"/>
+          <ellipse class="iris" cx="77" cy="124" rx="8" ry="6"/>
+          <ellipse class="iris" cx="123" cy="124" rx="8" ry="6"/>
+          <circle class="shine" cx="80" cy="122" r="2"/>
+          <circle class="shine" cx="126" cy="122" r="2"/>
         </g>
 
-        <ellipse class="blush" cx="62" cy="138" rx="10" ry="5"/>
-        <ellipse class="blush" cx="138" cy="138" rx="10" ry="5"/>
+        <ellipse class="blush" cx="62" cy="140" rx="10" ry="5"/>
+        <ellipse class="blush" cx="138" cy="140" rx="10" ry="5"/>
         <g class="freckles maomao-only">
-          <circle cx="62" cy="134" r="1.4"/><circle cx="68" cy="138" r="1.2"/><circle cx="58" cy="139" r="1.1"/><circle cx="65" cy="142" r="1"/>
-          <circle cx="138" cy="134" r="1.4"/><circle cx="132" cy="138" r="1.2"/><circle cx="142" cy="139" r="1.1"/><circle cx="135" cy="142" r="1"/>
-          <circle cx="96" cy="132" r="1"/><circle cx="104" cy="132" r="1"/>
+          <circle cx="92" cy="136" r="1.1"/><circle cx="96" cy="139" r="1"/><circle cx="104" cy="139" r="1"/><circle cx="108" cy="136" r="1.1"/>
+          <circle cx="99" cy="134" r="0.9"/><circle cx="87" cy="139" r="0.9"/><circle cx="113" cy="139" r="0.9"/>
         </g>
 
-        <path class="mouth closed" d="M93 142 Q100 148 107 142"/>
-        <path class="mouth cat" d="M90 141 Q95 147 100 142 Q105 147 110 141"/>
-        <ellipse class="mouth open" cx="100" cy="145" rx="6" ry="5"/>
-        <path class="mouth pout" d="M94 146 Q100 141 106 146"/>
+        <path class="mouth closed" d="M93 146 Q100 152 107 146"/>
+        <path class="mouth flat" d="M96 149 L104 149"/>
+        <path class="mouth cat" d="M90 145 Q95 151 100 146 Q105 151 110 145"/>
+        <ellipse class="mouth open" cx="100" cy="149" rx="5.5" ry="4.5"/>
+        <path class="mouth pout" d="M94 151 Q100 146 106 151"/>
+        <g class="herb">
+          <path class="stem" d="M100 232 Q104 214 108 200"/>
+          <ellipse class="leaf" cx="109" cy="202" rx="7" ry="3.5" transform="rotate(-40 109 202)"/>
+          <ellipse class="leaf" cx="103" cy="214" rx="6" ry="3" transform="rotate(30 103 214)"/>
+          <ellipse class="leaf" cx="110" cy="194" rx="5" ry="2.6" transform="rotate(10 110 194)"/>
+        </g>
       </g>
       <text class="zzz" x="150" y="40">z</text>
       <text class="zzz z2" x="164" y="26">z</text>

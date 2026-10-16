@@ -41,6 +41,7 @@
     "volume": 0.7,
     "chatterMinutes": 75,
     "character": "maomao",
+    "wander": true,
     "look": {}
   }
 }

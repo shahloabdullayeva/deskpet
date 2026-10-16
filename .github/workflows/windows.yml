@@ -1,0 +1,49 @@
+name: Windows app
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx electron-builder --win nsis portable
+      - run: copy setup\index.html dist\Maomao-Setup-Page.html
+        shell: cmd
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Maomao-windows
+          path: |
+            dist/Maomao-Setup.exe
+            dist/Maomao-Portable.exe
+      # One page with the newest installer: github.com/<you>/deskpet/releases/latest
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Maomao for Windows
+          make_latest: true
+          body: |
+            **For her — Maomao-Setup-Page.html:** download it, open it in Chrome or Edge, fill it in, press *Download setup file*, and send him `maomao-setup.maomao`.
+
+            **For him — Maomao-Setup.exe** — install it (no admin needed), then double-click the `.maomao` setup file she sent you.
+            **Maomao-Portable.exe** — no install; run it, then right-click Maomao → *Load setup file…*
+
+            Windows may say "Windows protected your PC" because the app isn't signed: click **More info → Run anyway**.
+
+            Built from ${{ github.sha }}.
+          files: |
+            dist/Maomao-Setup.exe
+            dist/Maomao-Portable.exe
+            dist/Maomao-Setup-Page.html

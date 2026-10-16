@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const MIME = { ".mp3": "audio/mpeg", ".ogg": "audio/ogg", ".oga": "audio/ogg", ".opus": "audio/ogg", ".m4a": "audio/mp4", ".wav": "audio/wav" };
+const MIME = { ".mp3": "audio/mpeg", ".ogg": "audio/ogg", ".oga": "audio/ogg", ".opus": "audio/ogg", ".m4a": "audio/mp4", ".wav": "audio/wav", ".webm": "audio/webm" };
 
 class Voice {
   constructor({ dir, config, env }) {
