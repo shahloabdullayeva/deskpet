@@ -7,12 +7,12 @@
 <style>
   :root {
     --bg: #f4f7f3; --card: #ffffff; --ink: #1f2a27; --muted: #5d6b66; --line: #d7e2db;
-    --accent: #3f8a55; --accent-ink: #ffffff; --soft: #e6f2e8; --warn: #8a5a12; --warn-bg: #fff4dc; --rec: #c2364b;
+    --accent: #3f8a55; --accent-ink: #ffffff; --soft: #e6f2e8; --warn: #8a5a12; --warn-bg: #fff4dc;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #121815; --card: #1b2420; --ink: #e5eee9; --muted: #9fb0a8; --line: #2e3b35;
-      --accent: #6cc086; --accent-ink: #0d1a12; --soft: #22352a; --warn: #f2c46d; --warn-bg: #3a2f17; --rec: #ff6f86;
+      --accent: #6cc086; --accent-ink: #0d1a12; --soft: #22352a; --warn: #f2c46d; --warn-bg: #3a2f17;
     }
   }
   * { box-sizing: border-box; }
@@ -34,14 +34,12 @@
   .days label { display: inline-flex; gap: 4px; font-weight: 400; margin-right: 10px; }
   button { font: inherit; border: 1px solid var(--line); background: var(--soft); color: var(--ink); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
   button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; padding: 12px 20px; font-size: 16px; }
-  button.rec.on { background: var(--rec); color: #fff; border-color: var(--rec); }
   button.ghost { background: transparent; }
   details { border-top: 1px solid var(--line); padding: 8px 0; }
   details:first-of-type { border-top: 0; }
   summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
   .note { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
   .ok { color: var(--accent); font-weight: 600; }
-  audio { height: 32px; max-width: 220px; }
   .pics { display: flex; gap: 12px; flex-wrap: wrap; }
   .pics figure { margin: 0; text-align: center; font-size: 13px; color: var(--muted); }
   .pics img { width: 90px; height: 110px; object-fit: contain; background: var(--bg); border: 1px dashed var(--line); border-radius: 8px; display: block; }
@@ -71,6 +69,7 @@
         <select id="character"><option value="maomao">Maomao</option><option value="catgirl">Cat-girl</option></select>
       </div>
     </div>
+    <label><input id="sound" type="checkbox" checked> Play a little chime when a message pops up</label>
   </section>
 
   <section>
@@ -98,14 +97,14 @@
   </section>
 
   <section>
-    <h2>3. What she says — in your words and your voice</h2>
-    <p class="hint">Write them exactly how you text him. Press 🎙 to record yourself saying a line. It plays in your real voice on his desk.</p>
+    <h2>3. What she says — in your words</h2>
+    <p class="hint">Write them exactly how you text him.</p>
     <div id="phrases"></div>
   </section>
 
   <section>
     <h2>4. Telegram (optional)</h2>
-    <p class="hint">Skip this and she lives only on his desk: check-ins, your voice, pokes and all her moves still work. With a bot she also messages him on Telegram, catches "checking" in your group chat, and you can send things to his desk from your phone.</p>
+    <p class="hint">Skip this and she lives only on his desk: check-ins, pokes and all her moves still work. With a bot she also messages him on Telegram, catches "checking" in your group chat, and you can send things to his desk from your phone.</p>
     <ol class="steps">
       <li>In Telegram open <b>@BotFather</b>, send <code>/newbot</code>, pick a name, copy the token here.</li>
       <li>Still in BotFather: <code>/setprivacy</code> → your bot → <b>Disable</b> (so she sees "checking" in the group).</li>
@@ -116,20 +115,11 @@
     <input id="token" type="password" placeholder="123456789:AA…" autocomplete="off">
     <label for="pair">Pair code</label>
     <input id="pair" type="text">
-    <label><input id="voice-notes" type="checkbox" checked> Send recorded lines as voice notes</label>
     <label><input id="forward" type="checkbox" checked> Forward to me what he writes to her</label>
   </section>
 
   <section>
     <h2>5. Extras (optional)</h2>
-    <details>
-      <summary>Sound like me even in lines I didn't record (ElevenLabs voice clone)</summary>
-      <p class="hint">Make an Instant Voice Clone of yourself on elevenlabs.io, then paste your API key and the voice ID.</p>
-      <div class="grid">
-        <div><label for="el-key">ElevenLabs API key</label><input id="el-key" type="password" autocomplete="off"></div>
-        <div><label for="el-voice">Voice ID</label><input id="el-voice" type="text"></div>
-      </div>
-    </details>
     <details>
       <summary>Let her write new messages in my style (Claude)</summary>
       <p class="hint">With a Claude API key she writes her "checking" reminders and her replies to him herself, using your lines, your style and your real messages below. Those get sent to the Claude API.</p>
@@ -215,16 +205,7 @@ function addCheckin(time = "12:00", kind = "howsYourDay") {
   $("checkins").append(row);
 }
 
-// ---- phrases with recordings
-const recorder = { current: null };
-
-function pickMime() {
-  for (const type of ["audio/ogg;codecs=opus", "audio/mp4", "audio/webm;codecs=opus", "audio/webm"]) {
-    if (window.MediaRecorder && MediaRecorder.isTypeSupported(type)) return type;
-  }
-  return "";
-}
-
+// ---- phrases
 function blobToBase64(blob) {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -233,58 +214,10 @@ function blobToBase64(blob) {
   });
 }
 
-function phraseRow(kind, text = "", audio = null) {
+function phraseRow(kind, text = "") {
   const row = el("div", { className: "row phrase" });
-  row.audio = audio;
   const input = el("input", { type: "text", value: text, placeholder: "type it the way you'd text it" });
-  const player = el("audio", { controls: true, hidden: !audio });
-  if (audio) player.src = `data:${audio.mime};base64,${audio.data}`;
-  const rec = el("button", { className: "rec", textContent: audio ? "🎙 Re-record" : "🎙 Record" });
-  const clear = el("button", { className: "ghost", textContent: "🗑", title: "Remove recording", hidden: !audio });
-  const upload = el("input", { type: "file", accept: "audio/*", hidden: true });
-  const pick = el("button", { className: "ghost", textContent: "📎", title: "Use an audio file" });
-
-  const setAudio = (value) => {
-    row.audio = value;
-    player.hidden = !value;
-    clear.hidden = !value;
-    rec.textContent = value ? "🎙 Re-record" : "🎙 Record";
-    if (value) player.src = `data:${value.mime};base64,${value.data}`;
-  };
-
-  rec.onclick = async () => {
-    if (recorder.current && recorder.current.row === row) return recorder.current.stop();
-    if (recorder.current) recorder.current.stop();
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = pickMime();
-      const media = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
-      const chunks = [];
-      media.ondataavailable = (event) => chunks.push(event.data);
-      media.onstop = async () => {
-        stream.getTracks().forEach((track) => track.stop());
-        rec.classList.remove("on");
-        recorder.current = null;
-        const type = (media.mimeType || mime || "audio/webm").split(";")[0];
-        const blob = new Blob(chunks, { type });
-        setAudio({ mime: type, data: await blobToBase64(blob) });
-      };
-      media.start();
-      rec.classList.add("on");
-      rec.textContent = "⏹ Stop";
-      recorder.current = { row, stop: () => media.stop() };
-    } catch (error) {
-      alert("Couldn't use the microphone: " + error.message);
-    }
-  };
-  clear.onclick = () => setAudio(null);
-  pick.onclick = () => upload.click();
-  upload.onchange = async () => {
-    const file = upload.files[0];
-    if (file) setAudio({ mime: file.type || "audio/mpeg", data: await blobToBase64(file) });
-  };
-
-  row.append(input, rec, pick, upload, player, clear, el("button", { className: "ghost", textContent: "✕", title: "Remove line", onclick: () => row.remove() }));
+  row.append(input, el("button", { className: "ghost", textContent: "✕", title: "Remove line", onclick: () => row.remove() }));
   return row;
 }
 
@@ -294,7 +227,7 @@ function buildPhrases(phrases) {
   for (const [kind, label] of KINDS) {
     const list = el("div", { className: "lines" });
     list.dataset.kind = kind;
-    for (const line of phrases[kind] || []) list.append(phraseRow(kind, line.text, line.audio));
+    for (const line of phrases[kind] || []) list.append(phraseRow(kind, line.text));
     const block = el("details", { open: ["howsYourDay", "checking"].includes(kind) }, [
       el("summary", { textContent: label }),
       list,
@@ -386,13 +319,11 @@ function fill(setup) {
   $("words").value = (c.checking?.words || DEFAULT_WORDS.split(", ")).join(", ");
   $("after").value = c.checking?.nudgeAfterMinutes ?? 20;
   $("max").value = c.checking?.maxNudgesPerDay ?? 4;
-  $("voice-notes").checked = c.telegram?.sendAsVoice !== false;
   $("forward").checked = c.telegram?.forwardHisMessagesToMe !== false;
-  $("el-voice").value = c.voice?.elevenlabsVoiceId || "";
+  $("sound").checked = c.pet?.sound !== false;
   const s = setup.secrets || {};
   $("token").value = s.telegramToken || "";
   $("pair").value = s.pairCode || randomCode();
-  $("el-key").value = s.elevenlabsKey || "";
   $("claude-key").value = s.anthropicKey || "";
   $("style").value = setup.style || "";
   state.examples = setup.examples || [];
@@ -407,17 +338,12 @@ function fill(setup) {
 
 function collect() {
   const phrases = {};
-  let n = 0;
   for (const list of document.querySelectorAll(".lines")) {
     const lines = [];
     for (const row of list.querySelectorAll(".phrase")) {
       const text = row.querySelector("input[type=text]").value.trim();
       if (!text) continue;
       const line = { text };
-      if (row.audio) {
-        const ext = { "audio/ogg": "ogg", "audio/mp4": "m4a", "audio/mpeg": "mp3", "audio/wav": "wav", "audio/webm": "webm" }[row.audio.mime] || "mp3";
-        line.audio = { name: `${list.dataset.kind}-${++n}.${ext}`, mime: row.audio.mime, data: row.audio.data };
-      }
       lines.push(line);
     }
     phrases[list.dataset.kind] = lines;
@@ -443,10 +369,9 @@ function collect() {
         nudgeAfterMinutes: Number($("after").value) || 20,
         maxNudgesPerDay: Number($("max").value) || 0,
       },
-      telegram: { sendAsVoice: $("voice-notes").checked, forwardHisMessagesToMe: $("forward").checked },
-      voice: { elevenlabsVoiceId: $("el-voice").value.trim(), elevenlabsModel: base.voice?.elevenlabsModel || "eleven_multilingual_v2" },
+      telegram: { forwardHisMessagesToMe: $("forward").checked },
       brain: base.brain || { model: "claude-opus-5-5", useClaudeFor: ["checking", "reply"] },
-      pet: { runBot: true, speakOutLoud: true, volume: 0.7, chatterMinutes: 75, wander: true, look: {}, ...(base.pet || {}), character: $("character").value },
+      pet: { runBot: true, volume: 0.7, chatterMinutes: 75, wander: true, look: {}, ...(base.pet || {}), sound: $("sound").checked, character: $("character").value },
     },
     phrases,
     style: $("style").value,
@@ -456,7 +381,6 @@ function collect() {
       telegramToken: $("token").value.trim(),
       pairCode: $("pair").value.trim(),
       anthropicKey: $("claude-key").value.trim(),
-      elevenlabsKey: $("el-key").value.trim(),
     },
   };
 }

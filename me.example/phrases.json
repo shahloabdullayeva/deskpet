@@ -1,45 +1,90 @@
 {
-  "_readme": "Replace these with things YOU actually say. Add \"audio\": \"file.mp3\" to play your own recording from the voice/ folder.",
-
+  "_readme": "Replace these with things YOU actually say.",
   "morning": [
-    { "text": "good morning babe ☀️ have the best day at work ok?" },
-    { "text": "morninggg 🥱 did you eat breakfast or just coffee again" }
+    {
+      "text": "good morning babe ☀️ have the best day at work ok?"
+    },
+    {
+      "text": "morninggg 🥱 did you eat breakfast or just coffee again"
+    }
   ],
   "howsYourDay": [
-    { "text": "hiii how's your day going?? 🥺" },
-    { "text": "okay tell me everything, how's work today" },
-    { "text": "checking in 👀 how's my favourite person doing" }
+    {
+      "text": "hiii how's your day going?? 🥺"
+    },
+    {
+      "text": "okay tell me everything, how's work today"
+    },
+    {
+      "text": "checking in 👀 how's my favourite person doing"
+    }
   ],
   "lunch": [
-    { "text": "lunch time!! go eat something real pls 🍜" },
-    { "text": "did you eat?? don't skip lunch again 😤" }
+    {
+      "text": "lunch time!! go eat something real pls 🍜"
+    },
+    {
+      "text": "did you eat?? don't skip lunch again 😤"
+    }
   ],
   "water": [
-    { "text": "drink some water babe 💧 i'm watching" },
-    { "text": "water break 💧 and stretch a little" }
+    {
+      "text": "drink some water babe 💧 i'm watching"
+    },
+    {
+      "text": "water break 💧 and stretch a little"
+    }
   ],
   "goodbye": [
-    { "text": "work's done!! come home 🏃‍♂️💕" },
-    { "text": "okay that's enough work for today, text me when you leave" }
+    {
+      "text": "work's done!! come home 🏃‍♂️💕"
+    },
+    {
+      "text": "okay that's enough work for today, text me when you leave"
+    }
   ],
   "checking": [
-    { "text": "hellooo you said \"checking\" like 20 min ago 👀" },
-    { "text": "still checking?? 😭 i'm waiting" },
-    { "text": "babe you forgot to reply didn't you 😑" }
+    {
+      "text": "hellooo you said \"checking\" like 20 min ago 👀"
+    },
+    {
+      "text": "still checking?? 😭 i'm waiting"
+    },
+    {
+      "text": "babe you forgot to reply didn't you 😑"
+    }
   ],
   "tap": [
-    { "text": "hehe hi 🥰" },
-    { "text": "stop poking me and get back to work 😤" },
-    { "text": "i miss you 🥺" },
-    { "text": "you're doing great, i'm proud of you 💕" }
+    {
+      "text": "hehe hi 🥰"
+    },
+    {
+      "text": "stop poking me and get back to work 😤"
+    },
+    {
+      "text": "i miss you 🥺"
+    },
+    {
+      "text": "you're doing great, i'm proud of you 💕"
+    }
   ],
   "chatter": [
-    { "text": "*stretches* 🐾" },
-    { "text": "don't forget to blink 👀" },
-    { "text": "sit up straight!!" }
+    {
+      "text": "*stretches* 🐾"
+    },
+    {
+      "text": "don't forget to blink 👀"
+    },
+    {
+      "text": "sit up straight!!"
+    }
   ],
   "reply": [
-    { "text": "aww 🥺💕" },
-    { "text": "i'll tell her!! she'll text you soon" }
+    {
+      "text": "aww 🥺💕"
+    },
+    {
+      "text": "i'll tell her!! she'll text you soon"
+    }
   ]
 }

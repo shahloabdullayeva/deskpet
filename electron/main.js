@@ -125,7 +125,7 @@ function menu() {
     { label: `${pet.config.petName} 🌿`, enabled: false },
     { type: "separator" },
     { label: "Show / hide", click: () => (win.isVisible() ? win.hide() : win.show()) },
-    { label: "Mute sound", type: "checkbox", checked: muted, click: () => (muted = !muted) },
+    { label: "Mute chime", type: "checkbox", checked: muted, click: () => (muted = !muted) },
     { label: "Quiet for 1 hour (in a meeting)", click: quietFor(60) },
     { label: "Start with my computer", type: "checkbox", checked: app.getLoginItemSettings().openAtLogin, click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }) },
     { type: "separator" },
@@ -160,9 +160,9 @@ app.whenReady().then(() => {
   tray.setContextMenu(menu());
   tray.on("click", () => win.show());
 
-  pet.events.on("say", ({ text, sound, mood }) => {
+  pet.events.on("say", ({ text, chime, mood }) => {
     if (Date.now() < hiddenUntil) return;
-    send("say", { text, mood, sound: sound && !muted ? `data:${sound.mime};base64,${sound.buffer.toString("base64")}` : null });
+    send("say", { text, mood, chime: chime && !muted && pet.config.pet?.sound !== false });
   });
   pet.events.on("mood", (mood) => send("mood", mood));
 

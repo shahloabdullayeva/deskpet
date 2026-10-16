@@ -46,7 +46,6 @@ function load() {
       telegramToken: process.env.TELEGRAM_BOT_TOKEN || secrets.telegramToken || "",
       pairCode: process.env.PAIR_CODE || secrets.pairCode || "",
       anthropicKey: process.env.ANTHROPIC_API_KEY || secrets.anthropicKey || "",
-      elevenlabsKey: process.env.ELEVENLABS_API_KEY || secrets.elevenlabsKey || "",
     },
   };
 }

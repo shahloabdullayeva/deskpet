@@ -7,7 +7,6 @@ const { localParts, isWorkTime, isDue } = require("./clock");
 const { saidChecking } = require("./checking");
 const { Telegram } = require("./telegram");
 const { Brain } = require("./brain");
-const { Voice } = require("./voice");
 
 const MOODS = { tap: "happy", reply: "happy", goodbye: "happy", morning: "happy", checking: "pout" };
 
@@ -20,7 +19,6 @@ class Deskpet {
     this.env = loaded.env;
     this.statePath = path.join(loaded.dataDir, "state.json");
     this.brain = new Brain(loaded);
-    this.voice = new Voice(loaded);
     this.telegram = loaded.env.telegramToken ? new Telegram(loaded.env.telegramToken) : null;
     this.events = new EventEmitter();
     this.waiting = new Map();
@@ -86,20 +84,16 @@ class Deskpet {
     return localParts(new Date(), this.config.timezone);
   }
 
-  // Compose a line, find its sound, show it on the desk and/or send it on Telegram.
-  async say(kind, context = {}, { chatId, replyTo, pet = true, loud = true } = {}) {
+  // Compose a line, show it on the desk (with a chime unless quiet) and/or send it on Telegram.
+  async say(kind, context = {}, { chatId, replyTo, pet = true, chime = true } = {}) {
     const line = await this.brain.write(kind, context);
-    const sound = loud || chatId ? await this.voice.soundFor(line) : null;
-    if (pet) this.events.emit("say", { text: line.text, sound: loud ? sound : null, mood: MOODS[kind] || "talk" });
-    if (chatId && this.telegram) {
-      if (sound && this.config.telegram?.sendAsVoice) await this.telegram.sendSound(chatId, sound, line.text, replyTo);
-      else await this.telegram.sendText(chatId, line.text, replyTo);
-    }
+    if (pet) this.events.emit("say", { text: line.text, chime, mood: MOODS[kind] || "talk" });
+    if (chatId && this.telegram) await this.telegram.sendText(chatId, line.text, replyTo);
     return line;
   }
 
   tap() {
-    return this.say("tap", {}, { loud: this.config.pet?.speakOutLoud });
+    return this.say("tap", {});
   }
 
   async tick() {
@@ -115,7 +109,7 @@ class Deskpet {
       if (this.state.fired.includes(key) || !isDue(parts, work, checkin.time)) continue;
       this.state.fired.push(key);
       this.saveState();
-      await this.say(checkin.kind, {}, { chatId: this.state.him?.chatId, loud: this.config.pet?.speakOutLoud });
+      await this.say(checkin.kind, {}, { chatId: this.state.him?.chatId });
     }
 
     const rules = this.config.checking;
@@ -126,13 +120,13 @@ class Deskpet {
       if (mood !== "idle" || this.state.nudges >= rules.maxNudgesPerDay) continue;
       this.state.nudges += 1;
       this.saveState();
-      await this.say("checking", { text: wait.text, minutes }, { chatId, replyTo: wait.messageId, loud: this.config.pet?.speakOutLoud });
+      await this.say("checking", { text: wait.text, minutes }, { chatId, replyTo: wait.messageId });
     }
 
     const chatter = (this.config.pet?.chatterMinutes || 0) * 60_000;
     if (chatter && mood === "idle" && this.petRunning && Date.now() - this.lastChatter > chatter) {
       this.lastChatter = Date.now();
-      await this.say("chatter", {}, { loud: false });
+      await this.say("chatter", {}, { chime: false });
     }
   }
 
@@ -156,17 +150,9 @@ class Deskpet {
     }
 
     if (isMe && isPrivate) {
-      const voice = message.voice || message.audio;
-      if (voice) {
-        if (!this.petRunning) return this.telegram.sendText(chatId, "The pet isn't open on his computer right now, so I can't play it 🥺");
-        const buffer = await this.telegram.download(voice.file_id);
-        this.events.emit("say", { text: `💌 a voice note from ${this.config.me}`, sound: { buffer, mime: voice.mime_type || "audio/ogg", filename: "note.ogg" }, mood: "happy" });
-        return this.telegram.sendText(chatId, "Played it on his desk 💕");
-      }
       if (text) {
         if (!this.petRunning) return this.telegram.sendText(chatId, "The pet isn't open on his computer right now 🥺");
-        const sound = await this.voice.soundFor({ text });
-        this.events.emit("say", { text, sound: this.config.pet?.speakOutLoud ? sound : null, mood: "happy" });
+        this.events.emit("say", { text, chime: true, mood: "happy" });
         return this.telegram.sendText(chatId, `${this.config.petName} said it on his desk 🐾`);
       }
     }
@@ -179,7 +165,7 @@ class Deskpet {
     if (this.config.telegram?.forwardHisMessagesToMe && this.state.me?.chatId) {
       await this.telegram.sendText(this.state.me.chatId, `💬 ${this.config.him} told ${this.config.petName}: ${text}`);
     }
-    const line = await this.say("reply", { history: this.history }, { chatId, loud: false });
+    const line = await this.say("reply", { history: this.history }, { chatId });
     this.history.push({ role: "assistant", content: line.text });
   }
 
@@ -191,7 +177,7 @@ class Deskpet {
     if (name === "/start" || name === "/help") {
       return this.telegram.sendText(
         chatId,
-        `Hi, I'm ${this.config.petName} 🐾\n\nTo set me up, each of you sends me once in private:\n/pair <code> me  (her)\n/pair <code> him  (him)\n\nShe can then:\n/test <kind> — send a check-in now (morning, howsYourDay, lunch, water, goodbye, checking)\n/status — see what I'm up to\nor just send me text or a voice note and I'll say it on his desk.`
+        `Hi, I'm ${this.config.petName} 🐾\n\nTo set me up, each of you sends me once in private:\n/pair <code> me  (her)\n/pair <code> him  (him)\n\nShe can then:\n/test <kind> — send a check-in now (morning, howsYourDay, lunch, water, goodbye, checking)\n/status — see what I'm up to\nor just send me a message and I'll show it on his desk.`
       );
     }
 
@@ -218,7 +204,6 @@ class Deskpet {
           `Local time ${parts.hhmm}, ${isWorkTime(parts, this.config.workHours) ? "work hours" : "off work"}`,
           `Check-ins sent today: ${this.state.fired.length}/${(this.config.checkins || []).length}`,
           `"Checking" nudges today: ${this.state.nudges}/${this.config.checking.maxNudgesPerDay}`,
-          `Voice: ${this.voice.canClone ? "your recordings + cloned voice" : "your recordings only"}`,
           `Claude: ${this.brain.client ? `on for ${this.brain.claudeFor.join(", ")}` : "off"}`,
         ].join("\n")
       );
@@ -230,7 +215,7 @@ class Deskpet {
         await this.telegram.sendText(chatId, "He hasn't paired yet, so here's a preview 👇");
         return this.say(kind, { text: "checking", minutes: 20 }, { chatId, pet: false });
       }
-      await this.say(kind, { text: "checking", minutes: 20 }, { chatId: this.state.him.chatId, loud: this.config.pet?.speakOutLoud });
+      await this.say(kind, { text: "checking", minutes: 20 }, { chatId: this.state.him.chatId });
       return this.telegram.sendText(chatId, `Sent "${kind}" to him ✅`);
     }
   }

@@ -1,5 +1,5 @@
 // A .maomao setup file is one JSON document made by setup/index.html: settings,
-// phrases, recordings and pictures together, so he only has to double-click it.
+// phrases and pictures together, so he only has to double-click it.
 const fs = require("fs");
 const path = require("path");
 
@@ -10,7 +10,6 @@ function install(file, home) {
   if (setup.kind !== "deskpet-setup" || !setup.config) throw new Error("This isn't a Maomao setup file.");
 
   fs.rmSync(home, { recursive: true, force: true });
-  fs.mkdirSync(path.join(home, "voice"), { recursive: true });
   fs.mkdirSync(path.join(home, "character"), { recursive: true });
 
   const write = (name, value) => fs.writeFileSync(path.join(home, name), typeof value === "string" ? value : JSON.stringify(value, null, 2));
@@ -21,12 +20,7 @@ function install(file, home) {
   };
 
   const phrases = {};
-  for (const [kind, lines] of Object.entries(setup.phrases || {})) {
-    phrases[kind] = lines.map((line) => {
-      const audio = save("voice", line.audio);
-      return audio ? { text: line.text, audio } : { text: line.text };
-    });
-  }
+  for (const [kind, lines] of Object.entries(setup.phrases || {})) phrases[kind] = lines.map((line) => ({ text: line.text }));
   for (const picture of setup.character || []) save("character", picture);
 
   write("config.json", setup.config);

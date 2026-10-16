@@ -15,7 +15,7 @@ let walking = false;
 let hovered = false;
 let talkTimer;
 let flapTimer;
-let audio;
+let chimes;
 
 function render() {
   const keep = [...petEl.classList].filter((name) => ["walking", "held", "left", "mouth-shut"].includes(name) || name.startsWith("act-"));
@@ -41,7 +41,28 @@ function stopTalking() {
   setFace(base);
 }
 
-function say({ text, mood, sound }) {
+// A soft two-note chime, made on the fly so there is no sound file to ship.
+function chime() {
+  try {
+    chimes ||= new AudioContext();
+    const now = chimes.currentTime;
+    for (const [i, freq] of [1318.5, 1760].entries()) {
+      const osc = chimes.createOscillator();
+      const gain = chimes.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const start = now + i * 0.12;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.25 * volume, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.6);
+      osc.connect(gain).connect(chimes.destination);
+      osc.start(start);
+      osc.stop(start + 0.65);
+    }
+  } catch {}
+}
+
+function say({ text, mood, chime: ring }) {
   stopTalking();
   talking = true;
   bubble.textContent = text;
@@ -60,21 +81,8 @@ function say({ text, mood, sound }) {
   }
 
   const duration = Math.min(14000, 3500 + text.length * 70);
-  if (audio) audio.pause();
-  if (sound) {
-    audio = new Audio(sound);
-    audio.volume = volume;
-    audio.onloadedmetadata = () => {
-      if (Number.isFinite(audio.duration)) {
-        clearTimeout(talkTimer);
-        talkTimer = setTimeout(stopTalking, Math.max(duration, audio.duration * 1000 + 1500));
-      }
-    };
-    audio.onended = () => clearInterval(flapTimer);
-    audio.play().catch(() => {});
-  } else if (speaking) {
-    setTimeout(() => clearInterval(flapTimer), Math.min(duration, 2500));
-  }
+  if (ring) chime();
+  if (speaking) setTimeout(() => clearInterval(flapTimer), Math.min(duration, 2500));
   talkTimer = setTimeout(stopTalking, duration);
 }
 

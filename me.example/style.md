@@ -1,6 +1,6 @@
 # How I text
 
-Write this in your own words — the more honest, the more the pet sounds like you.
+Write this in your own words — the more honest, the more the pet writes like you.
 
 - I mostly write in lowercase.
 - I stretch words when I'm excited: "hiii", "nooo", "okayyy".

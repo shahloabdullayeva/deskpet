@@ -8,9 +8,9 @@ work screen, talks like you, and checks in on him on Telegram.
 - **Check-ins** on work days: good morning, "how's your day", lunch, water, home time.
 - **"You said checking 👀"**: when he writes "checking", "one sec", "brb"… in your Telegram
   group and then goes quiet for 20 minutes, she replies to that message to nudge him.
-- **Sounds like you**: your own recordings (made right in the setup page), your cloned voice
-  (ElevenLabs), and your texting style (your lines, or Claude learning from your real chats).
-- **You can talk through her**: send the bot a text or voice note and it pops up on his desk.
+- **Writes like you**: your own lines, or Claude learning your texting style from your real chats.
+- **A soft chime** when a message pops up (he can mute it from her right-click menu).
+- **You can talk through her**: send the bot a message and it pops up on his desk.
 - **He can talk to her**: he can DM the bot; she answers like you and forwards it to you.
 - **She's alive**: blinks, breathes, braids swing, she walks along the bottom of the screen,
   looks around, sniffs her herbs, yawns, stretches, dangles when he drags her, hops when poked,
@@ -25,7 +25,6 @@ Everything is on the download page:
 
 1. Download **Maomao-Setup-Page.html** and open it in Chrome or Edge.
 2. Fill it in: names, his work hours, when she checks in, and her lines in your words.
-   Press 🎙 next to a line to record yourself saying it.
 3. *(Optional)* Telegram bot: in Telegram open **@BotFather** → `/newbot` → copy the token into
    the page. Then `/setprivacy` → your bot → **Disable**. Skip it and she lives only on his desk
    (see below).
@@ -51,11 +50,11 @@ Leave the bot token empty and everything happens on his screen only:
 
 | | Without a bot | With a bot |
 |---|---|---|
-| Check-ins on his desk in your voice | ✅ | ✅ |
+| Check-ins on his desk, with a chime | ✅ | ✅ |
 | Pokes, walking, herbs, all her moves | ✅ | ✅ |
 | Check-ins also sent to his Telegram | — | ✅ |
 | "You said checking 👀" reminders | — | ✅ (needs to see your group chat) |
-| You send text / voice notes to his desk | — | ✅ |
+| You send messages to his desk | — | ✅ |
 | He talks to her, you get his messages | — | ✅ |
 
 You can add a bot any time later: put the token in the setup page and send him the new file.
@@ -71,7 +70,7 @@ send him the new file. He just double-clicks it again.
 
 ### His controls
 
-Right-click Maomao (or the tray icon by the clock): mute, quiet for 1 hour (meetings),
+Right-click Maomao (or the tray icon by the clock): mute the chime, quiet for 1 hour (meetings),
 show/hide, start with Windows, load setup file, quit. Drag her anywhere.
 
 ## Making her look exactly like Maomao
@@ -100,6 +99,6 @@ npm run learn -- result.json "Your Name"   # style examples from a Telegram expo
 npm test
 ```
 
-`src/` is the brain (Telegram, schedule, voice, Claude, setup files), `electron/` is the
+`src/` is the brain (Telegram, schedule, Claude, setup files), `electron/` is the
 window, and `setup/index.html` is the setup page. Pushing to GitHub builds the Windows
 installer (`.github/workflows/windows.yml`) and updates the release page.
