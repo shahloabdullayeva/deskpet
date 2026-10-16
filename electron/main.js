@@ -20,7 +20,7 @@ function look() {
     const file = path.join(dir, `${mood}.png`);
     if (fs.existsSync(file)) images[mood] = `data:image/png;base64,${fs.readFileSync(file).toString("base64")}`;
   }
-  return { colors: pet.config.pet?.look || {}, images, name: pet.config.petName, volume: pet.config.pet?.volume ?? 0.7 };
+  return { character: pet.config.pet?.character || "maomao", colors: pet.config.pet?.look || {}, images, name: pet.config.petName, volume: pet.config.pet?.volume ?? 0.7 };
 }
 
 function createWindow() {

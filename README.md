@@ -1,9 +1,9 @@
 # deskpet 🐾
 
-A little anime cat-girl that sits in the corner of his work screen, talks like you,
-and checks in on him on Telegram.
+A little anime pet — Maomao-style apothecary girl by default, or a cat-girl — that sits in
+the corner of his work screen, talks like you, and checks in on him on Telegram.
 
-![idle, talking, happy, pouting, sleepy](docs/moods.png)
+![Maomao: idle, talking, happy, deadpan, sleepy](docs/maomao.png)
 
 - **Check-ins** on work days: good morning, "how's your day", lunch, water, home time.
 - **"You said checking 👀"** — when he writes "checking", "one sec", "brb"… in your
@@ -76,7 +76,12 @@ On Telegram, lines with sound go as voice notes (turn off with `telegram.sendAsV
 
 ### 4. Her look
 
-- Colours: `pet.look` in `me/config.json` (hair, eyes, skin, outfit).
+- Character: `pet.character` in `me/config.json` — `"maomao"` (fan-art nod to *The Apothecary
+  Diaries*: tied-up hair, freckles, green robe, herb sprig) or `"catgirl"`:
+
+  ![cat-girl](docs/moods.png)
+- Colours: `pet.look` in `me/config.json` overrides any of `hair`, `hairShine`, `eyes`, `skin`,
+  `outfit`, `outfitDark`, `collar`, `sash`, `leaf`, e.g. `{ "eyes": "#5e8f7a" }`.
 - Your own art: drop transparent `idle.png`, `talk.png`, `happy.png`, `sleepy.png` into
   `me/character/`. An anime version of you from an artist or an image generator works great.
 

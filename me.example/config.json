@@ -1,7 +1,7 @@
 {
   "me": "Me",
   "him": "babe",
-  "petName": "Mochi",
+  "petName": "Maomao",
   "timezone": "",
 
   "workHours": { "start": "09:00", "end": "18:00", "days": [1, 2, 3, 4, 5] },
@@ -40,13 +40,7 @@
     "speakOutLoud": true,
     "volume": 0.7,
     "chatterMinutes": 75,
-    "look": {
-      "hair": "#4a3355",
-      "hairShine": "#6b4d7a",
-      "eyes": "#8a5cf0",
-      "skin": "#ffe6d8",
-      "outfit": "#ffb8cf",
-      "outfitDark": "#f08fb0"
-    }
+    "character": "maomao",
+    "look": {}
   }
 }

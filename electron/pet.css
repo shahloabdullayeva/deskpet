@@ -6,7 +6,21 @@
   --outfit: #ffb8cf;
   --outfit-dark: #f08fb0;
   --ink: #3a2a3f;
+  --collar: #f3eee2;
+  --sash: #c98a5a;
+  --leaf: #6aa56a;
 }
+/* Maomao: dark green-black hair, green-grey eyes, pale green robe */
+:root.maomao {
+  --hair: #333d38;
+  --hair-shine: #4f5c55;
+  --eyes: #6f9a86;
+  --skin: #f7e4d4;
+  --outfit: #a9c7a4;
+  --outfit-dark: #6f9479;
+  --ink: #2f2a28;
+}
+:root:not(.maomao) .maomao-only, :root.maomao .cat-only { display: none; }
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; font-family: "Segoe UI", system-ui, sans-serif; }
 #stage { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
@@ -38,6 +52,14 @@ html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
 .lash { fill: var(--ink); }
 .line { fill: none; stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
 .blush { fill: #ff8fab; opacity: 0.45; }
+.maomao .blush { opacity: 0.25; }
+.freckles { fill: #b9846a; opacity: 0.8; }
+.collar { fill: var(--collar); }
+.sash { fill: var(--sash); }
+.sleeve { fill: var(--outfit); stroke: var(--outfit-dark); stroke-width: 1.5; }
+.stem { fill: none; stroke: #4c7a4c; stroke-width: 2; stroke-linecap: round; }
+.leaf { fill: var(--leaf); }
+.lid { fill: none; stroke: var(--ink); stroke-width: 3.4; stroke-linecap: round; }
 .mouth { fill: none; stroke: var(--ink); stroke-width: 2.6; stroke-linecap: round; }
 .mouth.open { fill: #c2456b; stroke-width: 2; }
 .zzz { fill: var(--eyes); font: 700 18px sans-serif; opacity: 0; }

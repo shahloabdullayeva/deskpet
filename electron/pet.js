@@ -98,8 +98,12 @@ window.pet.on("mood", (mood) => {
 });
 window.pet.on("look", (look) => {
   images = look.images || {};
+  document.documentElement.classList.toggle("maomao", look.character === "maomao");
   volume = look.volume;
-  const names = { hair: "--hair", hairShine: "--hair-shine", eyes: "--eyes", skin: "--skin", outfit: "--outfit", outfitDark: "--outfit-dark" };
+  const names = {
+    hair: "--hair", hairShine: "--hair-shine", eyes: "--eyes", skin: "--skin", outfit: "--outfit", outfitDark: "--outfit-dark",
+    collar: "--collar", sash: "--sash", leaf: "--leaf",
+  };
   for (const [key, value] of Object.entries(look.colors || {})) {
     if (names[key]) document.documentElement.style.setProperty(names[key], value);
   }
