@@ -33,8 +33,6 @@ function isWorkTime(parts, workHours) {
   );
 }
 
-// A check-in is due from its time until 10 minutes after, so a pet started at 3pm
-// does not fire the whole morning's check-ins at once.
 function isDue(parts, workHours, time) {
   const late = parts.minutes - toMinutes(time);
   return workHours.days.includes(parts.weekday) && late >= 0 && late < 10;

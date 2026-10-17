@@ -71,6 +71,7 @@
     "wander": true,
     "look": {},
     "sound": true,
-    "background": "black"
+    "background": "black",
+    "size": "medium"
   }
 }

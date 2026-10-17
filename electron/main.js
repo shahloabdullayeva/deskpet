@@ -2,7 +2,6 @@ const fs = require("fs");
 const path = require("path");
 const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, screen } = require("electron");
 
-// The installed app keeps your settings in its own user folder, so nothing needs editing by hand.
 const HOME = path.join(app.getPath("userData"), "me");
 process.env.DESKPET_HOME ||= HOME;
 process.env.DESKPET_DATA ||= path.join(app.getPath("userData"), "data");
@@ -10,8 +9,7 @@ process.env.DESKPET_DATA ||= path.join(app.getPath("userData"), "data");
 const { Deskpet } = require("../src/deskpet");
 const settings = require("../src/settings");
 
-const WIDTH = 280;
-const HEIGHT = 400;
+const SIZES = { small: 110, medium: 140, large: 190 };
 const ICON = path.join(__dirname, "icon.png");
 
 let win;
@@ -22,8 +20,9 @@ let hiddenUntil = 0;
 let walkTimer;
 let chatWin;
 let callStarted = 0;
+let fallTimer;
+let size = 140;
 
-// Where she sits and whether she's pinned there, kept across restarts.
 const PLACE = path.join(app.getPath("userData"), "place.json");
 let place = {};
 try {
@@ -39,9 +38,11 @@ function savePlace() {
   }, 500);
 }
 
+const width = () => Math.round(Math.max(240, size * 1.1));
+const height = () => Math.round(size + 120);
+
 if (!app.requestSingleInstanceLock()) app.quit();
 
-// Settings live in a window inside the app; saving restarts her with the new settings.
 let settingsWin;
 
 function openSettings() {
@@ -62,6 +63,10 @@ function openSettings() {
 ipcMain.handle("settings:read", () => settings.read(process.env.DESKPET_HOME));
 ipcMain.handle("settings:save", (_event, form) => {
   settings.write(process.env.DESKPET_HOME, form);
+  delete place.size;
+  try {
+    fs.writeFileSync(PLACE, JSON.stringify(place));
+  } catch {}
   if (app.isPackaged && pet?.isExample) app.setLoginItemSettings({ openAtLogin: true });
   app.relaunch();
   app.exit(0);
@@ -89,10 +94,15 @@ function look() {
     wander: settings.wander !== false,
     background: settings.background || "black",
     volume: settings.volume ?? 0.7,
+    size,
   };
 }
 
 function createWindow() {
+  const configured = pet.config.pet?.size;
+  size = clampSize(place.size || SIZES[configured] || Number(configured) || SIZES.medium);
+  const WIDTH = width();
+  const HEIGHT = height();
   const area = screen.getPrimaryDisplay().workArea;
   const onScreen = Number.isFinite(place.x) && screen.getAllDisplays().some(({ workArea: a }) => place.x >= a.x - WIDTH / 2 && place.x <= a.x + a.width - WIDTH / 2 && place.y >= a.y - HEIGHT / 2 && place.y <= a.y + a.height - HEIGHT / 2);
   win = new BrowserWindow({
@@ -113,15 +123,89 @@ function createWindow() {
   win.setVisibleOnAllWorkspaces(true);
   win.setIgnoreMouseEvents(true, { forward: true });
   win.loadFile(path.join(__dirname, "index.html"));
+  let lastCursor = "";
+  setInterval(() => {
+    if (!win || win.isDestroyed() || !win.isVisible()) return;
+    const point = screen.getCursorScreenPoint();
+    const [x, y] = win.getPosition();
+    const key = `${point.x - x},${point.y - y}`;
+    if (key === lastCursor) return;
+    lastCursor = key;
+    send("cursor", { x: point.x - x, y: point.y - y });
+  }, 40);
+}
+
+function clampSize(value) {
+  return Math.max(80, Math.min(320, Math.round(value)));
+}
+
+function resize(step) {
+  const next = clampSize(size * (step > 0 ? 1.1 : 1 / 1.1));
+  if (next === size) return;
+  const [x, y] = win.getPosition();
+  const [oldW, oldH] = [width(), height()];
+  size = next;
+  win.setBounds({ x: Math.round(x + (oldW - width()) / 2), y: y + oldH - height(), width: width(), height: height() });
+  send("size", size);
+  place = { ...place, size };
+  savePlace();
+}
+
+function fall(vx, vy) {
+  clearInterval(walkTimer);
+  clearInterval(fallTimer);
+  const cap = (v) => Math.max(-70, Math.min(70, v));
+  let [x, y] = win.getPosition();
+  vx = cap(vx * 16);
+  vy = cap(vy * 16);
+  let airborne = false;
+  fallTimer = setInterval(() => {
+    const W = width();
+    const H = height();
+    const displays = screen.getAllDisplays();
+    const here = screen.getDisplayNearestPoint({ x: Math.round(x + W / 2), y: Math.round(y + H / 2) }).workArea;
+    const floor = here.y + here.height - H;
+    if (!airborne && (y < floor - 2 || Math.abs(vy) > 3)) {
+      airborne = true;
+      send("airborne");
+    }
+    vy = cap(vy + 1.4);
+    vx *= 0.99;
+    let nx = x + vx;
+    const centre = nx + W / 2;
+    const landing = displays.some(({ workArea: a }) => centre >= a.x && centre <= a.x + a.width);
+    if (!landing) {
+      vx = -vx * 0.5;
+      nx = x;
+    }
+    x = nx;
+    y = Math.max(here.y - H / 2, y + vy);
+    if (y >= floor) {
+      y = floor;
+      const impact = vy;
+      if (impact > 9) {
+        vy = -impact * 0.38;
+        vx *= 0.7;
+        send("bounce", impact);
+      } else {
+        clearInterval(fallTimer);
+        win.setPosition(Math.round(x), Math.round(y));
+        savePlace();
+        send("landed", airborne ? impact : 0);
+        return;
+      }
+    }
+    win.setPosition(Math.round(x), Math.round(y));
+  }, 16);
 }
 
 function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
-// Walk sideways along the bottom of the screen, staying on the screen she is on.
 function walk(dx) {
   clearInterval(walkTimer);
+  const WIDTH = width();
   const [x, y] = win.getPosition();
   const area = screen.getDisplayNearestPoint({ x, y }).workArea;
   const target = Math.max(area.x, Math.min(area.x + area.width - WIDTH, x + dx));
@@ -138,10 +222,9 @@ function walk(dx) {
   }, 16);
 }
 
-// Jump to another screen (or somewhere else on this one if there is only one), landing on
-// the bottom edge like she walked there.
 function hop() {
   clearInterval(walkTimer);
+  const [WIDTH, HEIGHT] = [width(), height()];
   const [x, y] = win.getPosition();
   const here = screen.getDisplayNearestPoint({ x, y });
   const others = screen.getAllDisplays().filter((display) => display.id !== here.id);
@@ -154,15 +237,15 @@ function hop() {
   send("hopped");
 }
 
-// The chat opens next to her, on whichever side of the screen has room.
 function placeChat() {
   if (!win) return chatWin.center();
+  const [WIDTH, HEIGHT] = [width(), height()];
   const [x, y] = win.getPosition();
   const area = screen.getDisplayNearestPoint({ x, y }).workArea;
-  const [width, height] = chatWin.getSize();
-  const left = x - width + 30 >= area.x ? x - width + 30 : x + WIDTH - 30;
-  const top = Math.max(area.y, Math.min(y + HEIGHT - height - 40, area.y + area.height - height));
-  chatWin.setPosition(Math.round(Math.min(left, area.x + area.width - width)), Math.round(top));
+  const [chatW, chatH] = chatWin.getSize();
+  const left = x - chatW + 30 >= area.x ? x - chatW + 30 : x + WIDTH - 30;
+  const top = Math.max(area.y, Math.min(y + HEIGHT - chatH - 40, area.y + area.height - chatH));
+  chatWin.setPosition(Math.round(Math.min(left, area.x + area.width - chatW)), Math.round(top));
 }
 
 function openChat() {
@@ -207,7 +290,6 @@ function pin(pinned) {
   send("pinned", pinned);
 }
 
-// On a call she keeps quiet; afterwards she sometimes asks how it went.
 function startCall() {
   callStarted = Date.now();
   hiddenUntil = Infinity;
@@ -222,7 +304,6 @@ function endCall() {
   if (minutes >= 3 && Math.random() < 0.6) setTimeout(() => pet.afterCall(minutes).catch(() => {}), 20_000);
 }
 
-// Phone mode: she lives in his Telegram, this computer just keeps her running.
 function phoneMenu() {
   const paired = Boolean(pet.state.him);
   return Menu.buildFromTemplate([
@@ -315,12 +396,24 @@ app.whenReady().then(() => {
     send("flash", "happy");
     toggleChat();
   });
+  ipcMain.on("spun", () => pet.touch());
+  ipcMain.on("petted", () => {
+    pet.touch();
+    send("flash", "happy");
+    if (Math.random() < 0.4 && Date.now() >= hiddenUntil) pet.tap().catch(() => {});
+  });
+  ipcMain.on("resize", (_event, step) => resize(step));
+  ipcMain.on("drop", (_event, { vx, vy }) => {
+    if (place.pinned) return savePlace();
+    fall(Number(vx) || 0, Number(vy) || 0);
+  });
   ipcMain.on("open-chat", openChat);
   ipcMain.on("hover", (_event, over) => win.setIgnoreMouseEvents(!over, { forward: true }));
   ipcMain.on("walk", (_event, dx) => walk(dx));
   ipcMain.on("hop", hop);
   ipcMain.on("drag", (_event, { dx, dy }) => {
     clearInterval(walkTimer);
+    clearInterval(fallTimer);
     const [x, y] = win.getPosition();
     win.setPosition(Math.round(x + dx), Math.round(y + dy));
     if (chatWin && !chatWin.isDestroyed() && chatWin.isVisible()) placeChat();

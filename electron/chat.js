@@ -33,7 +33,6 @@ function grow() {
   input.style.height = `${Math.min(input.scrollHeight, 110)}px`;
 }
 
-// Memories and reminders: what she keeps about him, which he can see and delete.
 const PANELS = {
   memories: { title: "What she remembers", empty: "Nothing yet. Tell her about your day, what you like, your plans.", remove: "Forget", call: (id) => window.chat.forget(id) },
   reminders: { title: "Upcoming reminders", empty: 'None. Try "remind me at 3 to call mom".', remove: "Cancel", call: (id) => window.chat.cancel(id) },

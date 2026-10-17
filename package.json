@@ -12,7 +12,8 @@
     "dist": "electron-builder --win"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.135.0"
+    "@anthropic-ai/sdk": "^0.135.0",
+    "three": "^0.169.0"
   },
   "devDependencies": {
     "electron": "^44.8.0",

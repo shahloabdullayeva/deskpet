@@ -1,4 +1,3 @@
-// What she remembers about him and the reminders he asked for, kept next to the chat.
 const fs = require("fs");
 const path = require("path");
 const { localParts } = require("./clock");
@@ -34,7 +33,6 @@ class Memory {
     return before !== this.memories.length;
   }
 
-  // `at` is his local wall-clock time ("2026-10-17 15:00"); `inMinutes` is relative.
   remind(text, { at, inMinutes } = {}) {
     const due = inMinutes != null ? Date.now() + Number(inMinutes) * 60_000 : zonedToEpoch(at, this.timeZone);
     if (!Number.isFinite(due)) throw new Error(`I couldn't understand the time "${at}". Use YYYY-MM-DD HH:MM.`);
@@ -52,7 +50,6 @@ class Memory {
     return before !== this.reminders.length;
   }
 
-  // Reminders whose time has come; they are removed as they are handed out.
   due(now = Date.now()) {
     const ready = this.reminders.filter((reminder) => reminder.due <= now);
     if (ready.length) {
@@ -68,7 +65,6 @@ class Memory {
   }
 }
 
-// "YYYY-MM-DD HH:MM" in a time zone → epoch ms.
 function zonedToEpoch(text, timeZone) {
   const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})/.exec(String(text || "").trim());
   if (!match) return NaN;

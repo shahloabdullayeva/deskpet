@@ -9,7 +9,6 @@ const { Telegram } = require("./telegram");
 const { Brain, stripEmoji } = require("./brain");
 const { Memory } = require("./memory");
 
-// How she feels shows on her face: lonely looks pouty, sleepy after work, otherwise her usual self.
 const FACES = { sleepy: "sleepy", lonely: "pout", happy: "idle", calm: "idle" };
 const LONELY_AFTER_MINUTES = 150;
 
@@ -37,7 +36,6 @@ class Deskpet {
     this.startedAt = Date.now();
   }
 
-  // happy right after he talks to her, lonely when he hasn't in a long while, sleepy off work.
   feel(parts = this.now()) {
     if (!isWorkTime(parts, this.config.workHours)) return { feeling: "sleepy", why: "it's outside work hours" };
     const minutes = Math.round((Date.now() - Math.max(this.state.lastTalk || 0, this.startedAt)) / 60_000);
@@ -82,7 +80,6 @@ class Deskpet {
     }
   }
 
-  // The chat: everything she says on his screen and everything he types to her.
   addToChat(role, text) {
     const entry = { role, text: stripEmoji(text), at: Date.now() };
     this.desk = [...this.desk, entry].slice(-300);
@@ -92,7 +89,6 @@ class Deskpet {
     return entry;
   }
 
-  // He talks to her, on his screen or on Telegram; both share one conversation and one memory.
   async deskChat(text) {
     this.addToChat("him", text);
     this.touch();
@@ -146,7 +142,6 @@ class Deskpet {
     return this.events.listenerCount("say") > 0 && !this.phone;
   }
 
-  // Phone mode: no character on a screen; everything she says goes to his Telegram.
   get phone() {
     return this.config.pet?.mode === "phone";
   }
@@ -190,7 +185,6 @@ class Deskpet {
     return localParts(new Date(), this.config.timezone);
   }
 
-  // Compose a line, show it on the desk (with a chime unless quiet) and/or send it on Telegram.
   async say(kind, context = {}, { chatId, replyTo, pet = true, chime = true } = {}) {
     if (this.phone && !chatId && kind !== "tap") chatId = this.state.him?.chatId;
     const line = await this.brain.write(kind, context);

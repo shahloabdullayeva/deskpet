@@ -3,8 +3,6 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 
-// Where your settings live: the installed app keeps them in its user folder
-// (DESKPET_HOME), a checkout uses me/, and me.example/ is the fallback.
 function meDir() {
   for (const dir of [process.env.DESKPET_HOME, path.join(ROOT, "me")]) {
     if (dir && fs.existsSync(path.join(dir, "config.json"))) return dir;

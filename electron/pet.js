@@ -1,9 +1,15 @@
+import { createPet } from "./pet3d.js";
+
 const petEl = document.getElementById("pet");
 const bubble = document.getElementById("bubble");
+const badge = document.getElementById("badge");
 const art = document.getElementById("art");
-const drawn = document.getElementById("drawn");
+const sceneEl = document.getElementById("scene");
+const rootEl = document.documentElement;
 
-const ACTIONS = { look: 3000, sniff: 3000, yawn: 2600, stretch: 2400 };
+const ACTIONS = { look: 3, sniff: 3.2, yawn: 2.6, stretch: 2.4 };
+
+const model = createPet(sceneEl, { onPetted: () => window.pet.petted() });
 
 let base = "idle";
 let face = "idle";
@@ -13,18 +19,20 @@ let wander = true;
 let pinned = false;
 let talking = false;
 let walking = false;
+let airborne = false;
 let hovered = false;
+let held = false;
 let talkTimer;
 let flapTimer;
+let flashTimer;
+let clickTimer;
 let chimes;
 
 function render() {
-  const keep = [...petEl.classList].filter((name) => ["walking", "held", "left", "mouth-shut", "hop-out", "hop-in"].includes(name) || name.startsWith("act-"));
-  petEl.className = [face, ...keep].join(" ");
-  const held = petEl.classList.contains("held");
+  model.setFace(face);
   const image = (held && images.held) || (walking && images.walk) || images[face] || images.idle;
   art.hidden = !image;
-  drawn.hidden = Boolean(image);
+  sceneEl.hidden = Boolean(image);
   if (image && art.src !== image) art.src = image;
 }
 
@@ -37,12 +45,11 @@ function stopTalking() {
   clearTimeout(talkTimer);
   clearInterval(flapTimer);
   talking = false;
-  petEl.classList.remove("mouth-shut");
+  model.setMouth(false);
   bubble.hidden = true;
   setFace(base);
 }
 
-// A soft two-note chime, made on the fly so there is no sound file to ship.
 function chime() {
   try {
     chimes ||= new AudioContext();
@@ -70,39 +77,36 @@ function say({ text, mood, chime: ring }) {
   bubble.hidden = false;
   const speaking = mood === "talk" || !mood;
   setFace(speaking ? "talk" : mood);
+  model.jump();
 
-  // Flap the mouth while talking (swaps idle/talk pictures when custom art is used).
   if (speaking) {
-    let shut = false;
+    let open = false;
     flapTimer = setInterval(() => {
-      shut = !shut;
-      petEl.classList.toggle("mouth-shut", shut);
-      if (images.talk && images.idle) art.src = shut ? images.idle : images.talk;
-    }, 160);
+      open = !open;
+      model.setMouth(open);
+      if (images.talk && images.idle) art.src = open ? images.talk : images.idle;
+    }, 150);
   }
 
   const duration = Math.min(14000, 3500 + text.length * 70);
   if (ring) chime();
-  if (speaking) setTimeout(() => clearInterval(flapTimer), Math.min(duration, 2500));
+  if (speaking) setTimeout(() => (clearInterval(flapTimer), model.setMouth(false)), Math.min(duration, 2500));
   talkTimer = setTimeout(stopTalking, duration);
 }
 
-// Idle life: every so often she looks around, sniffs her herbs, yawns, stretches or goes for a walk.
 function act(name) {
-  petEl.classList.add(`act-${name}`);
-  setTimeout(() => petEl.classList.remove(`act-${name}`), ACTIONS[name]);
+  model.act(name, ACTIONS[name]);
 }
 
 function walk() {
   const dx = (Math.random() < 0.5 ? -1 : 1) * (120 + Math.random() * 380);
   walking = true;
-  petEl.classList.add("walking");
+  model.setWalking(Math.sign(dx));
   petEl.classList.toggle("left", dx < 0);
   render();
   window.pet.walk(dx);
 }
 
-// Jump up and out, reappear on another screen, land with a little bounce.
 function hop() {
   walking = true;
   petEl.classList.add("hop-out");
@@ -111,90 +115,147 @@ function hop() {
 
 function live() {
   setTimeout(live, 12000 + Math.random() * 25000);
-  if (talking || walking || hovered || face !== "idle" || document.hidden) return;
+  if (talking || walking || hovered || held || airborne || face !== "idle" || document.hidden) return;
   const roll = Math.random();
-  if (wander && !pinned && roll < 0.12) return hop();
-  if (wander && !pinned && roll < 0.4) return walk();
+  if (wander && !pinned && roll < 0.1) return hop();
+  if (wander && !pinned && roll < 0.36) return walk();
+  if (roll < 0.42) return model.wonder();
   const names = Object.keys(ACTIONS);
   act(names[Math.floor(Math.random() * names.length)]);
 }
 
-// Click = poke, drag = carry her around, right click = menu. Clicks pass through empty space.
-let down = null;
-for (const el of [petEl, bubble]) {
-  el.addEventListener("mouseenter", () => {
-    hovered = true;
-    window.pet.hover(true);
-  });
-  el.addEventListener("mouseleave", () => {
-    hovered = false;
-    if (!down) window.pet.hover(false);
-  });
+function inside(el, x, y) {
+  if (el.hidden) return false;
+  const r = el.getBoundingClientRect();
+  return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
 }
+
+function track(x, y) {
+  const r = sceneEl.getBoundingClientRect();
+  let over = false;
+  if (!art.hidden) over = inside(art, x, y);
+  else over = Boolean(model.cursor(x - r.left, y - r.top));
+  over ||= inside(bubble, x, y) || inside(badge, x, y);
+  if (over !== hovered && !down) {
+    hovered = over;
+    rootEl.classList.toggle("over", over);
+    window.pet.hover(over);
+  }
+}
+
+let down = null;
+let samples = [];
+
+window.addEventListener("mousemove", (event) => {
+  if (!down) return track(event.clientX, event.clientY);
+  const dx = event.screenX - down.x;
+  const dy = event.screenY - down.y;
+  if (!down.moved && Math.hypot(dx, dy) < 4) return;
+  if (!down.moved) {
+    held = true;
+    rootEl.classList.add("grabbing", "flying");
+    model.setHeld(true);
+    model.setWalking(0);
+    walking = false;
+    render();
+  }
+  down.moved = true;
+  model.drag(dx);
+  window.pet.drag(dx, dy);
+  samples.push({ x: event.screenX, y: event.screenY, t: performance.now() });
+  samples = samples.filter((s) => performance.now() - s.t < 90);
+  down.x = event.screenX;
+  down.y = event.screenY;
+});
+
+petEl.addEventListener("mousedown", (event) => {
+  if (event.button !== 0 || !hovered) return;
+  down = { x: event.screenX, y: event.screenY, moved: false };
+  samples = [{ x: event.screenX, y: event.screenY, t: performance.now() }];
+});
+
+window.addEventListener("mouseup", (event) => {
+  if (!down) return;
+  if (down.moved) {
+    held = false;
+    rootEl.classList.remove("grabbing", "flying");
+    model.setHeld(false);
+    const first = samples[0];
+    const last = samples[samples.length - 1];
+    const ms = last && first ? Math.max(16, last.t - first.t) : 16;
+    window.pet.drop(last ? (last.x - first.x) / ms : 0, last ? (last.y - first.y) / ms : 0);
+    render();
+  } else if (clickTimer) {
+    clearTimeout(clickTimer);
+    clickTimer = null;
+    model.spin();
+    window.pet.spun();
+  } else {
+    model.poke();
+    clickTimer = setTimeout(() => {
+      clickTimer = null;
+      window.pet.tap();
+    }, 260);
+  }
+  down = null;
+  track(event.clientX, event.clientY);
+});
+
 bubble.addEventListener("click", () => {
   stopTalking();
   window.pet.openChat();
 });
 petEl.addEventListener("contextmenu", (event) => {
   event.preventDefault();
-  window.pet.menu();
+  if (hovered) window.pet.menu();
 });
-petEl.addEventListener("mousedown", (event) => {
-  if (event.button === 0) down = { x: event.screenX, y: event.screenY, moved: false };
-});
-window.addEventListener("mousemove", (event) => {
-  if (!down) return;
-  const dx = event.screenX - down.x;
-  const dy = event.screenY - down.y;
-  if (!down.moved && Math.hypot(dx, dy) < 4) return;
-  if (!down.moved) {
-    petEl.classList.add("held");
-    render();
-  }
-  down.moved = true;
-  window.pet.drag(dx, dy);
-  down.x = event.screenX;
-  down.y = event.screenY;
-});
-window.addEventListener("mouseup", () => {
-  if (down && !down.moved) window.pet.tap();
-  if (down?.moved) {
-    petEl.classList.remove("held");
-    render();
-  }
-  down = null;
-  if (!petEl.matches(":hover") && !bubble.matches(":hover")) window.pet.hover(false);
+window.addEventListener("wheel", (event) => {
+  if (hovered) window.pet.resize(event.deltaY < 0 ? 1 : -1);
 });
 
+window.pet.on("cursor", ({ x, y }) => {
+  if (!down) track(x, y);
+});
 window.pet.on("say", say);
-// A quick face (happy when he opens the chat, talking while she "types" a reply).
-let flashTimer;
 window.pet.on("flash", (mood) => {
   if (talking) return;
   clearTimeout(flashTimer);
   setFace(mood);
   flashTimer = setTimeout(() => !talking && setFace(base), mood === "talk" ? 8000 : 1600);
 });
-
 window.pet.on("pinned", (value) => (pinned = value));
 window.pet.on("call", (on) => {
-  document.getElementById("badge").hidden = !on;
+  badge.hidden = !on;
   if (on) stopTalking();
 });
-
+window.pet.on("size", (size) => {
+  rootEl.style.setProperty("--size", `${size}px`);
+  model.jump();
+});
+window.pet.on("airborne", () => {
+  airborne = true;
+  rootEl.classList.add("flying");
+  model.setAirborne(true);
+});
+window.pet.on("bounce", (speed) => model.land(speed));
+window.pet.on("landed", (speed) => {
+  airborne = false;
+  rootEl.classList.remove("flying");
+  model.land(speed);
+});
 window.pet.on("hopped", () => {
   petEl.classList.remove("hop-out");
   petEl.classList.add("hop-in");
   setTimeout(() => {
     petEl.classList.remove("hop-in");
     walking = false;
+    model.setWalking(0);
     render();
   }, 600);
 });
-
 window.pet.on("walked", () => {
   walking = false;
-  petEl.classList.remove("walking");
+  model.setWalking(0);
   render();
 });
 window.pet.on("mood", (mood) => {
@@ -205,15 +266,10 @@ window.pet.on("look", (look) => {
   images = look.images || {};
   volume = look.volume;
   wander = look.wander !== false;
-  document.documentElement.classList.toggle("bg-black", look.background !== "none");
-  document.documentElement.classList.toggle("maomao", look.character === "maomao");
-  const names = {
-    hair: "--hair", hairShine: "--hair-shine", eyes: "--eyes", skin: "--skin", outfit: "--outfit", outfitDark: "--outfit-dark",
-    collar: "--collar", cuff: "--cuff", skirt: "--skirt", ribbon: "--ribbon",
-  };
-  for (const [key, value] of Object.entries(look.colors || {})) {
-    if (names[key]) document.documentElement.style.setProperty(names[key], value);
-  }
+  rootEl.classList.toggle("bg-black", look.background !== "none");
+  rootEl.classList.toggle("catgirl", look.character === "catgirl");
+  rootEl.style.setProperty("--size", `${look.size}px`);
+  model.setLook({ character: look.character, colors: look.colors });
   render();
 });
 window.pet.ready();

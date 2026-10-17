@@ -15,7 +15,6 @@ const TASKS = {
     `They wrote "${context.text}" about ${context.minutes} minutes ago and then went quiet. Playfully remind them they said they would check and still have not replied.`,
 };
 
-// Lines for moments added after a setup was made, so older installs still have something to say.
 const FALLBACK = {
   afterCall: [{ text: "how did the call go? did it get settled?" }, { text: "call's done. everything okay?" }, { text: "that was a long one. how did it go?" }],
 };
@@ -40,8 +39,6 @@ class Brain {
     return lines[index];
   }
 
-  // Your own phrases by default; Claude only for the kinds listed in
-  // config.brain.useClaudeFor, falling back to your phrases if it fails.
   async write(kind, context = {}) {
     if (!this.client || !(this.claudeFor.includes(kind) || ["chatter", "afterCall"].includes(kind))) return this.pick(kind);
     try {
@@ -57,8 +54,6 @@ class Brain {
     }
   }
 
-  // A turn of the chat with him. history is [{ role: "him" | "pet" | "her", text }], oldest
-  // first. With a Claude key she can remember things and set reminders through `tools`.
   async chat(history, tools) {
     if (!this.client) return { text: this.pick("reply").text, offline: true };
     try {
@@ -195,7 +190,6 @@ const TOOLS = [
 
 const EMOJI = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\uFE0F\u200D]/gu;
 
-// No emojis anywhere she speaks, even if one slips into a model reply or a phrase.
 function stripEmoji(text) {
   return String(text).replace(EMOJI, "").replace(/[ \t]{2,}/g, " ").replace(/ +([,.!?])/g, "$1").trim();
 }
@@ -209,8 +203,6 @@ function textOf(response) {
   );
 }
 
-// Claude wants user/assistant turns that alternate and start with the user. Her own
-// messages and your check-ins are both "assistant" turns from his point of view.
 function toMessages(history, me) {
   const messages = [];
   for (const entry of history) {

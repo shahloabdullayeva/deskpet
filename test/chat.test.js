@@ -6,7 +6,6 @@ const path = require("path");
 const { Brain } = require("../src/brain");
 const { Memory } = require("../src/memory");
 
-// A stand-in for the Claude client: first asks to use tools, then answers.
 function fakeClient(turns) {
   const calls = [];
   return {

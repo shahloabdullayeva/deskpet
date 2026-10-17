@@ -1,5 +1,3 @@
-// The in-app Settings window reads and writes the same files the pet runs on, so whoever
-// installs the app sets it up right there: no separate setup page or file to pass around.
 const fs = require("fs");
 const path = require("path");
 const { ROOT } = require("./config");
@@ -43,6 +41,7 @@ function read(home) {
     sound: config.pet?.sound !== false,
     wander: config.pet?.wander !== false,
     background: config.pet?.background || "black",
+    size: ["small", "medium", "large"].includes(config.pet?.size) ? config.pet.size : "medium",
     mode: config.pet?.mode === "phone" ? "phone" : "desktop",
     chatterMinutes: String([0, 90, 45, 20].reduce((best, option) => (Math.abs(option - (config.pet?.chatterMinutes ?? 45)) < Math.abs(best - (config.pet?.chatterMinutes ?? 45)) ? option : best))),
     anthropicKey: secrets.anthropicKey || "",
@@ -68,6 +67,7 @@ function write(home, form) {
     sound: form.sound !== false,
     wander: form.wander !== false,
     background: form.background === "none" ? "none" : "black",
+    size: ["small", "large"].includes(form.size) ? form.size : "medium",
     mode: form.mode === "phone" ? "phone" : "desktop",
     chatterMinutes: Number(form.chatterMinutes) || 0,
   };

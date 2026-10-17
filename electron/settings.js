@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const CHECKINS = { morning: "Good morning", howsYourDay: "How's your day", lunch: "Lunch reminder", water: "Drink water", goodbye: "Home time" };
-const FIELDS = ["mode", "name", "petName", "character", "background", "chatterMinutes", "anthropicKey", "talksLike", "style", "start", "end", "timezone", "telegramToken"];
+const FIELDS = ["mode", "name", "petName", "character", "size", "background", "chatterMinutes", "anthropicKey", "talksLike", "style", "start", "end", "timezone", "telegramToken"];
 let form;
 
 function fill(values) {
@@ -62,7 +62,6 @@ $("save").addEventListener("click", async () => {
 $("cancel").addEventListener("click", () => window.settings.close());
 $("close").addEventListener("click", () => window.settings.close());
 
-// Phone mode needs a Telegram bot, and the work day and time zone are his.
 function showMode() {
   const phone = $("mode").value === "phone";
   $("about").textContent = phone ? "About him" : "About you";

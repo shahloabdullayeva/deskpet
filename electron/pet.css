@@ -1,151 +1,35 @@
-:root {
-  --hair: #4a3355;
-  --hair-shine: #6b4d7a;
-  --eyes: #8a5cf0;
-  --eyes-light: #b9a0f7;
-  --skin: #ffe6d8;
-  --outfit: #ffb8cf;
-  --outfit-dark: #f08fb0;
-  --ink: #3a2a3f;
-  --collar: #ffd6e3;
-  --inner: #f3f4f2;
-  --cuff: #ffe08f;
-  --skirt: #7a2f4a;
-  --ribbon: #7f98e0;
-  --leaf: #6aa56a;
-}
-/* Maomao: dark teal hair, blue-violet eyes, green robe with mint collar, maroon skirt */
-:root.maomao {
-  --hair: #1f4a45;
-  --hair-shine: #2f6a61;
-  --eyes: #5b5fcf;
-  --eyes-light: #9ea6f2;
-  --skin: #fcebe1;
-  --outfit: #6fae6c;
-  --outfit-dark: #4d8a52;
-  --collar: #a6dbb1;
-  --cuff: #cfe07c;
-  --ink: #232a2a;
-}
-:root:not(.maomao) .maomao-only, :root.maomao .cat-only { display: none; }
+:root { --size: 140px; --accent: #4d8a52; }
+:root.catgirl { --accent: #f08fb0; }
 
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; font-family: "Segoe UI", system-ui, sans-serif; }
 #stage { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
 
 #bubble {
-  position: relative; max-width: 230px; margin: 0 12px 6px; padding: 10px 14px;
-  background: #fff; color: #2d2a2e; border: 2px solid var(--outfit-dark); border-radius: 18px;
-  font-size: 14px; line-height: 1.35; box-shadow: 0 4px 14px rgb(0 0 0 / 0.15);
+  position: relative; max-width: 210px; margin: 0 10px 2px; padding: 8px 12px;
+  background: #fff; color: #2d2a2e; border: 2px solid var(--accent); border-radius: 16px;
+  font-size: 13px; line-height: 1.35; box-shadow: 0 4px 14px rgb(0 0 0 / 0.15);
   animation: pop 0.25s ease-out; cursor: pointer; overflow-wrap: anywhere;
 }
 #bubble::after {
-  content: ""; position: absolute; bottom: -9px; left: 50%; width: 14px; height: 14px; margin-left: -7px;
-  background: #fff; border-right: 2px solid var(--outfit-dark); border-bottom: 2px solid var(--outfit-dark); transform: rotate(45deg);
+  content: ""; position: absolute; bottom: -8px; left: 50%; width: 12px; height: 12px; margin-left: -6px;
+  background: #fff; border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: rotate(45deg);
 }
 
-#badge { margin-bottom: 6px; padding: 3px 10px; border-radius: 999px; background: #0e0e10; color: #d9e2dd; font-size: 12px; }
-#pet { width: 190px; height: 247px; cursor: grab; transform-origin: 50% 100%; }
-#pet:active { cursor: grabbing; }
-#pet svg, #pet img { width: 100%; height: 100%; display: block; -webkit-user-drag: none; }
-#pet.left svg, #pet.left img { transform: scaleX(-1); }
-/* Black card behind her so she stands out on any wallpaper. */
-:root.bg-black #pet { background: #0e0e10; border-radius: 28px; box-shadow: 0 6px 20px rgb(0 0 0 / 0.35); }
-:root.bg-black .zzz { fill: #cfd6ff; }
-:root.bg-black #drawn { filter: drop-shadow(0 0 1.5px rgb(255 255 255 / 0.45)); }
+#badge { margin-bottom: 4px; padding: 2px 9px; border-radius: 999px; background: #0e0e10; color: #d9e2dd; font-size: 11px; }
+#pet { position: relative; width: calc(var(--size) * 0.9); height: var(--size); transform-origin: 50% 100%; }
+#pet canvas, #pet img { width: 100%; height: 100%; display: block; -webkit-user-drag: none; }
+#pet.left img { transform: scaleX(-1); }
+:root.bg-black:not(.flying) #pet::before {
+  content: ""; position: absolute; left: 12%; right: 12%; top: 14%; bottom: 2%; z-index: -1;
+  border-radius: 50%; background: radial-gradient(closest-side, rgb(14 14 16 / 0.7) 55%, transparent);
+}
+:root.over #pet { cursor: grab; }
+:root.over.grabbing #pet { cursor: grabbing; }
 
-.hair { fill: var(--hair); }
-.hair-shine { fill: var(--hair-shine); }
-.skin { fill: var(--skin); }
-.outfit { fill: var(--outfit); }
-.outfit-dark, .ear-inner { fill: var(--outfit-dark); }
-.collar { fill: var(--collar); }
-.inner { fill: var(--inner); }
-.cuff { fill: var(--cuff); }
-.sleeve { fill: var(--outfit); stroke: var(--outfit-dark); stroke-width: 1.5; }
-.skirt { fill: var(--skirt); }
-.skirt-fold { fill: none; stroke: rgb(0 0 0 / 0.18); stroke-width: 2; }
-.finger { fill: none; stroke: #e4bfae; stroke-width: 1.4; }
-.ribbon { fill: var(--ribbon); }
-.ribbon-dark { fill: none; stroke: rgb(0 0 0 / 0.18); stroke-width: 1.5; }
-.herb { transform-box: fill-box; transform-origin: 50% 100%; }
-.bead.red { fill: #b9364b; }
-.bead.teal { fill: #3aa29d; }
-.white { fill: #fff; }
-.iris { fill: var(--eyes); }
-.iris-light { fill: var(--eyes-light); opacity: 0.8; }
-.pupil { fill: var(--ink); opacity: 0.85; }
-.shine { fill: #fff; }
-.lash { fill: var(--ink); }
-.lid { fill: none; stroke: var(--ink); stroke-width: 3.6; stroke-linecap: round; }
-.line { fill: none; stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
-.blush { fill: #ff8fab; opacity: 0.45; }
-.maomao .blush { opacity: 0.2; }
-.freckles { fill: #c08a70; opacity: 0.85; }
-.stem { fill: none; stroke: #4c7a4c; stroke-width: 2; stroke-linecap: round; }
-.leaf { fill: var(--leaf); }
-.mouth { fill: none; stroke: var(--ink); stroke-width: 2.6; stroke-linecap: round; }
-.mouth.open { fill: #c2456b; stroke-width: 2; }
-.zzz { fill: var(--eyes); font: 700 18px sans-serif; opacity: 0; }
-
-/* Faces per mood. Maomao keeps her flat deadpan mouth where the cat-girl smiles. */
-.eyes, .mouth, .herb { display: none; }
-.idle .open-eyes, .talk .open-eyes { display: inline; }
-.happy .happy-eyes, .sleepy .sleepy-eyes, .pout .pout-eyes { display: inline; }
-.idle .mouth.closed, .sleepy .mouth.closed, .happy .mouth.cat, .pout .mouth.pout { display: inline; }
-.talk .mouth.open { display: inline; }
-.talk.mouth-shut .mouth.open { display: none; }
-.talk.mouth-shut .mouth.closed { display: inline; }
-.maomao .idle .mouth.closed, .maomao .talk.mouth-shut .mouth.closed { display: none; }
-.maomao .idle .mouth.flat, .maomao .talk.mouth-shut .mouth.flat { display: inline; }
-
-/* Always on: breathing, swaying, blinking, tail and braids. */
-.body { animation: breathe 3.2s ease-in-out infinite; transform-origin: 100px 250px; }
-.head { animation: sway 6s ease-in-out infinite; transform-origin: 100px 170px; }
-.tail { animation: wag 1.6s ease-in-out infinite; transform-origin: 150px 225px; }
-.braid { animation: swing 3s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 0; }
-.braid.right { animation-delay: -1.5s; }
-.eye { animation: blink 4.5s infinite; transform-box: fill-box; transform-origin: center; }
-#pet.happy { animation: hop 0.5s ease-out 2; }
-.sleepy .head { animation: nod 4s ease-in-out infinite; }
-.sleepy .zzz { animation: zzz 3s ease-in-out infinite; }
-.sleepy .z2 { animation-delay: 1.5s; }
-
-/* Little things she does on her own. */
-#pet.walking { animation: walk 0.45s ease-in-out infinite; }
 #pet.hop-out { animation: hop-out 0.45s ease-in forwards; }
 #pet.hop-in { animation: hop-in 0.6s ease-out; }
-#pet.walking .braid { animation-duration: 0.9s; }
-#pet.held { animation: dangle 1.2s ease-in-out infinite; transform-origin: 50% 0; }
-#pet.held .open-eyes { display: none; }
-#pet.held .pout-eyes { display: inline; }
-.act-look .gaze { animation: look 3s ease-in-out; }
-.act-sniff .herb { display: inline; animation: sniff 3s ease-in-out; }
-.act-sniff .head { animation: tilt 3s ease-in-out; }
-.act-sniff .open-eyes { display: none; }
-.act-sniff .happy-eyes { display: inline; }
-.act-yawn .open-eyes, .act-yawn .mouth { display: none; }
-.act-yawn .sleepy-eyes, .act-yawn .mouth.open { display: inline; }
-.act-yawn .mouth.open { animation: yawn 2.6s ease-in-out; transform-box: fill-box; transform-origin: center; }
-.act-stretch .body { animation: stretch 2.4s ease-in-out; }
-.act-stretch .head { animation: stretch-head 2.4s ease-in-out; }
 
-@keyframes breathe { 50% { transform: scaleY(1.015); } }
-@keyframes sway { 25% { transform: rotate(-2deg); } 75% { transform: rotate(2deg); } }
-@keyframes wag { 50% { transform: rotate(14deg); } }
-@keyframes swing { 50% { transform: rotate(6deg); } }
-@keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.08); } }
-@keyframes hop { 40% { transform: translateY(-14px) scale(1.03, 0.97); } }
-@keyframes nod { 50% { transform: rotate(4deg) translateY(4px); } }
-@keyframes zzz { 0% { opacity: 0; transform: translateY(6px); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }
 @keyframes pop { from { transform: scale(0.6); opacity: 0; } }
 @keyframes hop-out { 30% { transform: translateY(8px) scale(1.06, 0.92); } 100% { transform: translateY(-140px) scale(0.9); opacity: 0; } }
 @keyframes hop-in { 0% { transform: translateY(-120px); opacity: 0; } 60% { transform: translateY(6px) scale(1.06, 0.92); opacity: 1; } 100% { transform: none; } }
-@keyframes walk { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
-@keyframes dangle { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
-@keyframes look { 0%, 100% { transform: translateX(0); } 20%, 40% { transform: translateX(-4px); } 60%, 80% { transform: translateX(4px); } }
-@keyframes sniff { 0% { transform: translateY(0); } 25%, 80% { transform: translate(-4px, -78px) rotate(-12deg); } 100% { transform: translateY(0); } }
-@keyframes tilt { 25%, 80% { transform: rotate(-6deg) translateY(2px); } }
-@keyframes yawn { 0%, 100% { transform: scale(0.6); } 40%, 70% { transform: scale(1.5, 1.8); } }
-@keyframes stretch { 40%, 70% { transform: scaleY(1.06); } }
-@keyframes stretch-head { 40%, 70% { transform: translateY(-10px) rotate(3deg); } }

@@ -1,7 +1,3 @@
-// Learn how you text from a Telegram Desktop chat export.
-//   Telegram Desktop → chat with him → ⋮ → Export chat history → JSON (no media needed)
-//   npm run learn -- path/to/result.json "Your Name"
-// Your messages are saved to me/examples.json on this computer only.
 const fs = require("fs");
 const path = require("path");
 const { ROOT } = require("./config");
@@ -32,7 +28,6 @@ const mine = [...new Set(
     .filter((text) => text.length >= 2 && text.length <= 200 && !/https?:\/\//.test(text))
 )];
 
-// Keep a spread across the whole history, newest last.
 const keep = 300;
 const step = Math.max(1, mine.length / keep);
 const examples = Array.from({ length: Math.min(keep, mine.length) }, (_, index) => mine[Math.floor(index * step)]);
