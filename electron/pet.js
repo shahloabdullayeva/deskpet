@@ -31,6 +31,7 @@ let volume = 0.7;
 let wander = true;
 let pinned = false;
 let paused = false;
+let napping = false;
 let talking = false;
 let walking = false;
 let airborne = false;
@@ -295,16 +296,37 @@ window.pet.on("landed", (speed) => {
   rootEl.classList.remove("flying");
   model.land(speed);
 });
-window.pet.on("walked", () => {
+window.pet.on("walked", (where) => {
   walking = false;
   model.setWalking(0);
+  if (napping) {
+    napping = false;
+    if (asleep()) {
+      model.setAsleep(true, where?.side || 1);
+      rootEl.classList.add("lying");
+    }
+  }
+  render();
+});
+window.pet.on("nap", (dx) => {
+  if (!dx) return;
+  walking = true;
+  model.setWalking(Math.sign(dx));
   render();
 });
 window.pet.on("mood", (mood) => {
+  const was = base;
   base = mood;
-  model.setAsleep(mood === "sleepy");
-  if (mood === "sleepy" && walking) window.pet.stopWalking();
   if (!talking) setFace(mood);
+  if (mood !== "sleepy") {
+    napping = false;
+    rootEl.classList.remove("lying");
+    return model.setAsleep(false);
+  }
+  if (was === "sleepy") return;
+  model.setAsleep(false);
+  napping = true;
+  window.pet.nap();
 });
 window.pet.on("look", (look) => {
   images = look.images || {};

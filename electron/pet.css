@@ -24,6 +24,7 @@ html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
   content: ""; position: absolute; left: 12%; right: 12%; top: 14%; bottom: 2%; z-index: -1;
   border-radius: 50%; background: radial-gradient(closest-side, rgb(14 14 16 / 0.7) 55%, transparent);
 }
+:root.bg-black.lying:not(.flying) #pet::before { left: 0; right: 0; top: 52%; bottom: 0; }
 :root.over #pet { cursor: grab; }
 :root.over.grabbing #pet { cursor: grabbing; }
 

@@ -314,9 +314,9 @@ function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
-function walk(dx) {
+function walk(dx, done = {}) {
   clearInterval(walkTimer);
-  if (place.pinned || !alive(win)) return send("walked");
+  if (place.pinned || !alive(win)) return send("walked", done);
   const WIDTH = width();
   const [x, y] = win.getPosition();
   const area = screen.getDisplayNearestPoint({ x, y }).workArea;
@@ -328,11 +328,25 @@ function walk(dx) {
     if (!step || Math.abs(target - now) <= Math.abs(step)) {
       clearInterval(walkTimer);
       savePlace();
-      send("walked");
+      send("walked", done);
       return;
     }
     win.setPosition(now + step, y);
   }, 16);
+}
+
+function nap() {
+  if (!alive(win)) return send("walked", { side: 1 });
+  const W = width();
+  const [x, y] = win.getPosition();
+  const area = screen.getDisplayNearestPoint({ x: Math.round(x + W / 2), y }).workArea;
+  const left = area.x;
+  const right = area.x + area.width - W;
+  const side = x - left <= right - x ? 1 : -1;
+  if (place.pinned) return send("walked", { side });
+  const dx = (side === 1 ? left : right) - x;
+  send("nap", dx);
+  walk(dx, { side });
 }
 
 function stopWalking() {
@@ -557,6 +571,7 @@ app.whenReady().then(() => {
   if (LINUX) setInterval(keepOnTop, 2000);
   ipcMain.on("walk", (_event, dx) => walk(dx));
   ipcMain.on("stop-walking", stopWalking);
+  ipcMain.on("nap", nap);
   ipcMain.on("drag", (_event, { dx, dy }) => {
     clearInterval(walkTimer);
     clearInterval(fallTimer);

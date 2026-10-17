@@ -316,6 +316,9 @@ export function createPet(canvas, { onPetted } = {}) {
     hopV: 0,
     asleep: false,
     hops: 0,
+    lie: 0,
+    lieV: 0,
+    lieSide: 1,
     pet: 0,
     petTime: 0,
     lastPetted: -99,
@@ -663,13 +666,16 @@ export function createPet(canvas, { onPetted } = {}) {
     state.surprise = Math.max(0, state.surprise - dt);
 
     if (state.face === "sleepy" && t > state.nextZ) {
-      emit("z", { at: [0.42, 2.15, 0.2], scale: 0.2, life: 2.4, rise: 0.45, drift: 0.05 });
+      const lying = state.lie > 0.5;
+      emit("z", { at: lying ? [-state.lieSide * 0.75, 0.85, 0.2] : [0.42, 2.15, 0.2], scale: 0.2, life: 2.4, rise: 0.45, drift: 0.05 });
       state.nextZ = t + 1.4;
     }
 
     const still = state.asleep && !state.held && !state.airborne && state.face === "sleepy";
     const sway = still ? 0.15 : 1;
-    let [targetYaw, targetPitch] = still ? [0, 0.28] : lookTarget();
+    [state.lie, state.lieV] = spring(state.lie, still ? 1 : 0, state.lieV, 18, 7, dt);
+    const lie = Math.max(0, Math.min(1, state.lie));
+    let [targetYaw, targetPitch] = still ? [0, 0.28 * (1 - lie)] : lookTarget();
     if (action === "look") targetYaw = Math.sin(progress * Math.PI * 2) * 0.6;
     if (action === "yawn") targetPitch = -0.25 * bell;
     if (action === "sniff") [targetYaw, targetPitch] = [-0.15 * bell, 0.18 * bell];
@@ -686,7 +692,7 @@ export function createPet(canvas, { onPetted } = {}) {
     state.gaze[0] += (state.gazeTarget[0] - state.gaze[0]) * Math.min(1, dt * 12);
     state.gaze[1] += (state.gazeTarget[1] - state.gaze[1]) * Math.min(1, dt * 12);
 
-    const facingTarget = state.walking ? state.walking * 1.05 : 0.15 + state.yaw * 0.25;
+    const facingTarget = state.walking ? state.walking * 1.05 : (0.15 + state.yaw * 0.25) * (1 - lie);
     [state.facing, state.facingV] = spring(state.facing, facingTarget, state.facingV, 30, 8, dt);
     root.rotation.y = state.facing;
 
@@ -770,12 +776,19 @@ export function createPet(canvas, { onPetted } = {}) {
     [state.squash, state.squashV] = spring(state.squash, 0, state.squashV, 260, 11, dt);
     const stretch = action === "stretch" ? bell * 0.06 : 0;
     rig.scale.set(1 + state.squash, 1 - state.squash + stretch, 1 + state.squash);
-    rig.position.y = -2.3 + bob + state.hopY;
-    rig.rotation.z = wobble + (state.airborne ? Math.sin(t * 7) * 0.12 : 0);
+    rig.position.y = -2.3 + bob + state.hopY + lie * 0.27;
+    rig.position.x = state.lieSide * lie * 1.1;
+    rig.rotation.z = wobble + (state.airborne ? Math.sin(t * 7) * 0.12 : 0) + state.lieSide * lie * (Math.PI / 2);
+    if (lie > 0.01) {
+      for (const leg of legs) leg.rotation.x += -1.25 * lie;
+      head.rotation.z += state.lieSide * -0.25 * lie;
+    }
 
     shadow.visible = !state.held && !state.airborne;
     const lift = Math.min(1, state.hopY / 1.2);
     shadow.scale.setScalar(1 - lift * 0.4);
+    shadow.scale.x *= 1 + lie * 0.9;
+    shadow.position.x = state.lieSide * lie * 0.05;
     shadow.material.opacity = 1 - lift * 0.6;
 
     for (let i = sprites.length - 1; i >= 0; i--) {
@@ -880,8 +893,9 @@ export function createPet(canvas, { onPetted } = {}) {
     setPaused(paused) {
       state.paused = paused;
     },
-    setAsleep(asleep) {
+    setAsleep(asleep, side) {
       state.asleep = asleep;
+      if (side) state.lieSide = side;
       if (asleep) state.hops = 0;
     },
     wonder() {

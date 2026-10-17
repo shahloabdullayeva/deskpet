@@ -106,9 +106,12 @@ everyone on their own.
 - **She watches you:** her head and eyes follow the mouse while it's near her.
 - Now and then she walks a few steps, does a little hop where she stands, sniffs her herbs,
   stretches or yawns. She never jumps off to somewhere else on the screen by herself.
-- **Asleep** after work: eyes shut, head down, little Zs, and she stays perfectly still. No
-  walking, hopping or following the mouse until she wakes up. A reminder still wakes her to
-  say it.
+- **Asleep** after work: she walks to the nearest bottom corner of the screen and lies down
+  there on her side, head toward the wall, eyes shut, little Zs, perfectly still. No walking,
+  hopping or following the mouse until she wakes up and gets back on her feet. If she's pinned
+  she lies down right where she is. Pick her up and she wakes enough to dangle; put her down and
+  she lies down again wherever you drop her. (She can't nap on top of other windows: Wayland and
+  Electron don't let an app see where other apps' windows are.)
 - **Right-click her** (or the tray icon by the clock): Chat, Show/hide, Mute chime,
   I'm on a call / Call's over (she stays quiet, then sometimes asks how it went), Quiet for
   1 hour, Pin her here (no walking, and she stays put after restarts), Settings,
