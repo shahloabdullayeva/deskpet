@@ -3,6 +3,10 @@ const path = require("path");
 const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, powerMonitor, screen } = require("electron");
 
 const LINUX = process.platform === "linux";
+app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
+app.commandLine.appendSwitch("disable-renderer-backgrounding");
+app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
+
 if (LINUX) {
   app.commandLine.appendSwitch("enable-transparent-visuals");
   app.commandLine.appendSwitch("ignore-gpu-blocklist");
@@ -38,10 +42,13 @@ let place = {};
 try {
   place = JSON.parse(fs.readFileSync(PLACE, "utf8"));
 } catch {}
+const alive = (w) => Boolean(w && !w.isDestroyed());
+
 let saveTimer;
 function savePlace() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
+    if (!alive(win)) return;
     const [x, y] = win.getPosition();
     place = { ...place, x, y };
     fs.writeFileSync(PLACE, JSON.stringify(place));
@@ -69,7 +76,14 @@ function setStartup(on) {
   fs.writeFileSync(AUTOSTART, `[Desktop Entry]\nType=Application\nName=Maomao\nExec="${exec}"${args}\nIcon=maomao\nX-GNOME-Autostart-enabled=true\nTerminal=false\n`);
 }
 
+function stopTimers() {
+  clearTimeout(saveTimer);
+  clearInterval(walkTimer);
+  clearInterval(fallTimer);
+}
+
 function restart() {
+  stopTimers();
   app.relaunch(process.env.APPIMAGE ? { execPath: process.env.APPIMAGE, args: process.argv.slice(1) } : undefined);
   app.exit(0);
 }
@@ -77,7 +91,7 @@ function restart() {
 let settingsWin;
 
 function openSettings() {
-  if (settingsWin && !settingsWin.isDestroyed()) return settingsWin.focus();
+  if (alive(settingsWin)) return settingsWin.focus();
   settingsWin = new BrowserWindow({
     width: 440,
     height: 720,
@@ -101,7 +115,7 @@ ipcMain.handle("settings:save", (_event, form) => {
   if (app.isPackaged && pet?.isExample) setStartup(true);
   restart();
 });
-ipcMain.on("settings:close", () => settingsWin?.close());
+ipcMain.on("settings:close", () => alive(settingsWin) && settingsWin.close());
 
 function look() {
   const dir = path.join(pet.dir, "character");
@@ -147,15 +161,17 @@ function createWindow() {
     skipTaskbar: true,
     hasShadow: false,
     icon: ICON,
-    webPreferences: { preload: path.join(__dirname, "preload.js") },
+    webPreferences: { preload: path.join(__dirname, "preload.js"), backgroundThrottling: false },
   });
+  win.on("hide", () => send("visible", false));
+  win.on("show", () => send("visible", true));
   win.setAlwaysOnTop(true, "floating");
   win.setVisibleOnAllWorkspaces(true);
   win.setIgnoreMouseEvents(true, { forward: true });
   win.loadFile(path.join(__dirname, "index.html"));
   let lastCursor = "";
   setInterval(() => {
-    if (!win || win.isDestroyed() || !win.isVisible()) return;
+    if (!alive(win) || !win.isVisible()) return;
     const point = screen.getCursorScreenPoint();
     const [x, y] = win.getPosition();
     const key = `${point.x - x},${point.y - y}`;
@@ -170,6 +186,7 @@ function clampSize(value) {
 }
 
 function resize(step) {
+  if (!alive(win)) return;
   const next = clampSize(size * (step > 0 ? 1.1 : 1 / 1.1));
   if (next === size) return;
   const [x, y] = win.getPosition();
@@ -190,6 +207,7 @@ function fall(vx, vy) {
   vy = cap(vy * 16);
   let airborne = false;
   fallTimer = setInterval(() => {
+    if (!alive(win)) return clearInterval(fallTimer);
     const W = width();
     const H = height();
     const displays = screen.getAllDisplays();
@@ -235,13 +253,14 @@ function send(channel, payload) {
 
 function walk(dx) {
   clearInterval(walkTimer);
-  if (place.pinned) return send("walked");
+  if (place.pinned || !alive(win)) return send("walked");
   const WIDTH = width();
   const [x, y] = win.getPosition();
   const area = screen.getDisplayNearestPoint({ x, y }).workArea;
   const target = Math.max(area.x, Math.min(area.x + area.width - WIDTH, x + dx));
   const step = Math.sign(target - x) * 2;
   walkTimer = setInterval(() => {
+    if (!alive(win)) return clearInterval(walkTimer);
     const [now] = win.getPosition();
     if (!step || Math.abs(target - now) <= Math.abs(step)) {
       clearInterval(walkTimer);
@@ -260,7 +279,8 @@ function stopWalking() {
 }
 
 function placeChat() {
-  if (!win) return chatWin.center();
+  if (!alive(chatWin)) return;
+  if (!alive(win)) return chatWin.center();
   const [WIDTH, HEIGHT] = [width(), height()];
   const [x, y] = win.getPosition();
   const area = screen.getDisplayNearestPoint({ x, y }).workArea;
@@ -271,7 +291,7 @@ function placeChat() {
 }
 
 function openChat() {
-  if (!chatWin || chatWin.isDestroyed()) {
+  if (!alive(chatWin)) {
     chatWin = new BrowserWindow({
       width: 360,
       height: 520,
@@ -285,7 +305,7 @@ function openChat() {
       webPreferences: { preload: path.join(__dirname, "chat-preload.js") },
     });
     chatWin.loadFile(path.join(__dirname, "chat.html"));
-    chatWin.once("ready-to-show", () => chatWin.show());
+    chatWin.once("ready-to-show", () => alive(chatWin) && chatWin.show());
   } else {
     chatWin.show();
   }
@@ -294,7 +314,7 @@ function openChat() {
 }
 
 function toggleChat() {
-  if (chatWin && !chatWin.isDestroyed() && chatWin.isVisible()) chatWin.hide();
+  if (alive(chatWin) && chatWin.isVisible()) chatWin.hide();
   else openChat();
 }
 
@@ -352,7 +372,7 @@ function startUpdates() {
     updateReady = true;
     refreshTray();
     const install = setInterval(() => {
-      const busy = chatWin && !chatWin.isDestroyed() && chatWin.isFocused();
+      const busy = alive(chatWin) && chatWin.isFocused();
       if (busy || powerMonitor.getSystemIdleTime() < 120) return;
       clearInterval(install);
       send("say", { text: "brb, getting an update", mood: "happy", chime: false });
@@ -374,7 +394,7 @@ function menu() {
     { label: `Feeling ${pet.feeling || pet.feel().feeling}`, enabled: false },
     { type: "separator" },
     { label: `Chat with ${pet.config.petName}`, click: openChat },
-    { label: "Show / hide", click: () => (win.isVisible() ? win.hide() : win.show()) },
+    { label: "Show / hide", click: () => alive(win) && (win.isVisible() ? win.hide() : win.show()) },
     { label: "Mute chime", type: "checkbox", checked: muted, click: (item) => ((muted = item.checked), refreshTray()) },
     callStarted
       ? { label: "Call's over", click: endCall }
@@ -392,7 +412,9 @@ function menu() {
   ]);
 }
 
-app.on("second-instance", () => win?.show());
+app.on("second-instance", () => alive(win) && win.show());
+
+process.on("uncaughtException", (error) => console.error("[main]", error));
 
 app.whenReady().then(() => {
   app.dock?.hide();
@@ -403,7 +425,7 @@ app.whenReady().then(() => {
   tray = new Tray(nativeImage.createFromPath(ICON).resize({ width: LINUX ? 24 : 16, height: LINUX ? 24 : 16 }));
   tray.setToolTip(pet.config.petName);
   tray.setContextMenu(menu());
-  tray.on("click", () => win.show());
+  tray.on("click", () => alive(win) && win.show());
 
   pet.events.on("say", ({ text, chime, mood }) => {
     if (Date.now() < hiddenUntil) return;
@@ -412,10 +434,10 @@ app.whenReady().then(() => {
   pet.events.on("mood", (mood) => send("mood", mood));
   pet.events.on("feeling", refreshTray);
   pet.events.on("feeling", (feeling) => {
-    if (chatWin && !chatWin.isDestroyed()) chatWin.webContents.send("chat:feeling", feeling);
+    if (alive(chatWin)) chatWin.webContents.send("chat:feeling", feeling);
   });
   pet.events.on("chat", (entry) => {
-    if (chatWin && !chatWin.isDestroyed()) chatWin.webContents.send("chat:add", entry);
+    if (alive(chatWin)) chatWin.webContents.send("chat:add", entry);
   });
 
   ipcMain.handle("chat:info", () => ({
@@ -435,7 +457,7 @@ app.whenReady().then(() => {
   ipcMain.handle("chat:lists", lists);
   ipcMain.handle("chat:forget", (_event, id) => (pet.memory.forget(id), lists()));
   ipcMain.handle("chat:cancel", (_event, id) => (pet.memory.cancel(id), lists()));
-  ipcMain.on("chat:close", () => chatWin?.hide());
+  ipcMain.on("chat:close", () => alive(chatWin) && chatWin.hide());
 
   ipcMain.on("ready", () => {
     send("look", look());
@@ -460,20 +482,21 @@ app.whenReady().then(() => {
     fall(Number(vx) || 0, Number(vy) || 0);
   });
   ipcMain.on("open-chat", openChat);
-  ipcMain.on("hover", (_event, over) => win.setIgnoreMouseEvents(!over, { forward: true }));
+  ipcMain.on("hover", (_event, over) => alive(win) && win.setIgnoreMouseEvents(!over, { forward: true }));
   ipcMain.on("walk", (_event, dx) => walk(dx));
   ipcMain.on("stop-walking", stopWalking);
   ipcMain.on("drag", (_event, { dx, dy }) => {
     clearInterval(walkTimer);
     clearInterval(fallTimer);
+    if (!alive(win)) return;
     const [x, y] = win.getPosition();
     win.setPosition(Math.round(x + dx), Math.round(y + dy));
-    if (chatWin && !chatWin.isDestroyed() && chatWin.isVisible()) placeChat();
+    if (alive(chatWin) && chatWin.isVisible()) placeChat();
     savePlace();
   });
   ipcMain.on("menu", () => {
     refreshTray();
-    menu().popup({ window: win });
+    if (alive(win)) menu().popup({ window: win });
   });
 
   pet.start();
@@ -481,5 +504,8 @@ app.whenReady().then(() => {
   refreshTray();
 });
 
-app.on("before-quit", () => pet?.stop());
+app.on("before-quit", () => {
+  stopTimers();
+  pet?.stop();
+});
 app.on("window-all-closed", () => {});

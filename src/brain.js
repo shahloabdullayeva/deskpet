@@ -108,7 +108,7 @@ class Brain {
 
   system() {
     const { me, him, petName } = this.config;
-    const user = him || "the user";
+    const user = him && him !== "you" ? him : "the user";
     const maomao = (this.config.pet?.character || "maomao") === "maomao";
     const examples = Object.entries(this.phrases)
       .filter(([kind, lines]) => !kind.startsWith("_") && Array.isArray(lines))

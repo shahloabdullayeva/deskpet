@@ -16,8 +16,8 @@ her weight, blinks and bounces instead of being a flat picture.
 1. Download **[Maomao-Setup.exe](https://github.com/shahloabdullayeva/deskpet/releases/latest/download/Maomao-Setup.exe)**
    and run it. It installs for your user only, so no admin rights are needed.
    If Windows says "Windows protected your PC", click **More info**, then **Run anyway**.
-2. Maomao appears in the bottom corner and opens **Settings**. It's already filled in for John
-   (Eastern time, 7am to 4pm, Monday to Friday). Paste the Claude API key, then click **Save**.
+2. Maomao appears in the bottom corner and opens **Settings**. Put in your name, your work hours
+   and a Claude API key, then click **Save**. (Time zone defaults to your computer's.)
 
 Can't install on this computer? Use
 **[Maomao-Portable.exe](https://github.com/shahloabdullayeva/deskpet/releases/latest/download/Maomao-Portable.exe)**,
@@ -85,13 +85,13 @@ everyone on their own.
 - **Reminders:** "remind me at 3 to call mom", "in 20 minutes tell me to stretch". She pops up
   with a chime when it's time. See or cancel them under **Reminders**.
 - **Check-ins:** good morning, how's your day, lunch, water and home time, at the times set in
-  Settings. She only says them when he's actually at his computer (he's moved the mouse or typed
-  in the last 5 minutes). If he comes in late, she says good morning when he arrives, not at
-  7:15 to an empty desk. If he's away at lunch or water time, she waits for him to come back
+  Settings. She only says them when you're actually at your computer (you've moved the mouse or typed
+  in the last 5 minutes). If you come in late, she says good morning when you arrive, not at
+  9:15 to an empty desk. If you're away at lunch or water time, she waits for you to come back
   (up to an hour and a half).
-- **Working late:** after 4pm she stays awake as long as he's still working. If he's still there
-  an hour later, she tells him once not to stay too long. She only gets sleepy once he's
-  actually gone.
+- **Working late:** after your work day ends she stays awake as long as you're still working. If
+  you're still there an hour later, she tells you once not to stay too long. She only gets sleepy
+  once you've actually gone.
 - **Double-click her** and she spins and does a little jump.
 - **Stroke her head** with the mouse (move it back and forth over her hair): she closes her eyes,
   blushes and little hearts float up. Sometimes she says something about it.
@@ -116,10 +116,13 @@ everyone on their own.
 
 ## Settings
 
-- **His name**, her name and look (Maomao or cat-girl), her size, and whether she has a soft
+- **Your name**, her name and look (Maomao or cat-girl), her size, and whether she has a soft
   dark glow behind her (so she stands out on busy wallpapers) or nothing.
 - **Claude API key**: needed for chatting, memories and reminders. It stays on your computer.
-- **She texts like** and **How she should talk**: optional, to give her someone's texting style.
+- **She texts like** and **How she should talk**: optional. Leave them empty and she talks as
+  Maomao: calm, a little deadpan, into herbs and medicine, and makes sure you eat and drink water.
+  Fill them in and she texts in that person's style instead. That lives only in that computer's
+  settings, never in the app itself.
 - **Work day**: hours, days, which check-ins and when, time zone.
 - **Chime** on/off, and whether she walks around.
 

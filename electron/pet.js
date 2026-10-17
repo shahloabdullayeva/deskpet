@@ -18,7 +18,7 @@ function start3d() {
     console.warn(`3D failed, showing her picture instead: ${error.message}`);
     const still = () => {};
     const flat = { cursor: () => false, partAt: () => null };
-    for (const name of ["setLook", "setFace", "setMouth", "act", "setWalking", "setHeld", "drag", "setAirborne", "land", "poke", "spin", "jump", "hop", "wonder", "setAsleep"]) flat[name] = still;
+    for (const name of ["setLook", "setFace", "setMouth", "act", "setWalking", "setHeld", "drag", "setAirborne", "land", "poke", "spin", "jump", "hop", "wonder", "setAsleep", "setPaused"]) flat[name] = still;
     flat.flat = true;
     return flat;
   }
@@ -30,6 +30,7 @@ let images = {};
 let volume = 0.7;
 let wander = true;
 let pinned = false;
+let paused = false;
 let talking = false;
 let walking = false;
 let airborne = false;
@@ -126,7 +127,7 @@ function asleep() {
 
 function live() {
   setTimeout(live, 15000 + Math.random() * 30000);
-  if (talking || walking || hovered || held || airborne || asleep() || face !== base || document.hidden) return;
+  if (talking || walking || hovered || held || airborne || asleep() || face !== base || paused) return;
   const roll = Math.random();
   if (roll < 0.05) return model.hop();
   if (wander && !pinned && base !== "pout" && roll < 0.27) return walk();
@@ -235,6 +236,10 @@ window.pet.on("flash", (mood) => {
   flashTimer = setTimeout(() => !talking && setFace(base), mood === "talk" ? 8000 : 1600);
 });
 window.pet.on("pinned", (value) => (pinned = value));
+window.pet.on("visible", (visible) => {
+  paused = !visible;
+  model.setPaused(paused);
+});
 window.pet.on("call", (on) => {
   badge.hidden = !on;
   if (on) stopTalking();

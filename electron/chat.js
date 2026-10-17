@@ -108,5 +108,5 @@ window.chat.info().then((info) => {
   window.chat.onFeeling(showFeeling);
   status.classList.toggle("off", !info.online);
   for (const entry of info.history) add(entry);
-  if (!info.history.length) add({ role: "pet", text: `hi ${info.him}, it's me, ${info.petName}. talk to me whenever you want, I'll remember things and remind you of stuff too`, at: Date.now() });
+  if (!info.history.length) add({ role: "pet", text: `${info.him && info.him !== "you" ? `hi ${info.him}` : "hi"}, it's me, ${info.petName}. talk to me whenever you want, I'll remember things and remind you of stuff too`, at: Date.now() });
 });

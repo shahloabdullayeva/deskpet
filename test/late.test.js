@@ -6,7 +6,11 @@ const path = require("path");
 
 function makePet(idle) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "deskpet-"));
-  fs.copyFileSync(path.join(__dirname, "..", "me.example", "config.json"), path.join(home, "config.json"));
+  const config = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "me.example", "config.json"), "utf8"));
+  config.timezone = "America/New_York";
+  config.workHours = { start: "07:00", end: "16:00", days: [1, 2, 3, 4, 5] };
+  config.checkins = [{ time: "07:15", kind: "morning" }, { time: "12:00", kind: "lunch" }, { time: "16:00", kind: "goodbye" }];
+  fs.writeFileSync(path.join(home, "config.json"), JSON.stringify(config));
   process.env.DESKPET_HOME = home;
   process.env.DESKPET_DATA = path.join(home, "data");
   delete require.cache[require.resolve("../src/config")];

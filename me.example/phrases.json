@@ -2,16 +2,16 @@
   "_readme": "Lines she uses for check-ins (and when there is no Claude key). No emojis.",
   "morning": [
     {
-      "text": "morning. coffee first, people later"
+      "text": "morning. did you sleep or just close your eyes for a while"
     },
     {
-      "text": "you're here. good. the day can start now"
+      "text": "you're here. good. sit, i'll pretend to be busy too"
     },
     {
-      "text": "morning john. try not to hate everyone before 9"
+      "text": "morning. have you eaten, or is it coffee for breakfast again"
     },
     {
-      "text": "oh you showed up. morning"
+      "text": "oh, you came. morning"
     }
   ],
   "howsYourDay": [
@@ -19,13 +19,13 @@
       "text": "how's it going so far"
     },
     {
-      "text": "still alive?"
+      "text": "still alive over there?"
     },
     {
       "text": "how's the day treating you. honestly"
     },
     {
-      "text": "is it a good day or a pretend good day"
+      "text": "good day, or the kind you just get through"
     }
   ],
   "lunch": [
@@ -33,41 +33,41 @@
       "text": "go eat something"
     },
     {
-      "text": "lunch. you're not a plant, you can't live on sunlight"
+      "text": "lunch. a body runs on food, not on stubbornness"
     },
     {
-      "text": "eat. the work will still be there, sadly"
+      "text": "eat. i'd prescribe it if i could"
     },
     {
-      "text": "did you eat or are you running on spite again"
+      "text": "did you eat, or are you running on willpower again"
     }
   ],
   "water": [
     {
-      "text": "drink water"
+      "text": "drink some water"
     },
     {
-      "text": "water. now"
+      "text": "water. now, please"
     },
     {
-      "text": "when did you last drink water. don't lie"
+      "text": "when did you last drink water. don't lie to your apothecary"
     },
     {
-      "text": "hydrate, it's cheaper than therapy"
+      "text": "a glass of water fixes more than you'd think"
     }
   ],
   "goodbye": [
     {
-      "text": "it's 4. go home"
+      "text": "work's over. go home"
     },
     {
-      "text": "okay that's enough work for today"
+      "text": "that's enough for today"
     },
     {
-      "text": "done. close the laptop before it notices"
+      "text": "done. close it before it finds more for you to do"
     },
     {
-      "text": "go home john. the emails can wait till tomorrow"
+      "text": "go rest. the rest can wait till tomorrow"
     }
   ],
   "tap": [
@@ -75,78 +75,78 @@
       "text": "what"
     },
     {
-      "text": "hi. you poked me"
+      "text": "hm?"
     },
     {
-      "text": "i was busy doing nothing, thanks"
+      "text": "i was sorting herbs, you know"
     },
     {
-      "text": "stop poking me and go work"
+      "text": "yes, i'm here"
     },
     {
-      "text": "yes?"
+      "text": "poking me won't make the day shorter"
     }
   ],
   "chatter": [
     {
-      "text": "random thought. tomorrow is a very patient liar"
+      "text": "you've been sitting a while. stretch"
     },
     {
-      "text": "i was going to say something deep but i forgot it"
+      "text": "i found a new herb today. well, i read about one"
     },
     {
-      "text": "how's your day actually going"
+      "text": "how's the thing you were worried about"
     },
     {
-      "text": "you've been quiet. suspicious"
+      "text": "it's quiet. i like it"
     },
     {
-      "text": "fun fact, nobody asked. still telling you"
+      "text": "drink something warm, it helps"
     },
     {
-      "text": "are you working or pretending, be honest"
+      "text": "don't forget to blink"
     }
   ],
   "reply": [
     {
-      "text": "idk"
+      "text": "hm, okay"
+    },
+    {
+      "text": "noted"
+    },
+    {
+      "text": "tell me more"
+    },
+    {
+      "text": "that's interesting, actually"
+    },
+    {
+      "text": "i'm listening"
     },
     {
       "text": "fair"
-    },
-    {
-      "text": "hm"
-    },
-    {
-      "text": "okay that's actually funny"
-    },
-    {
-      "text": "no"
-    },
-    {
-      "text": "tell me more, i'm bored"
     }
   ],
   "afterCall": [
     {
-      "text": "how did the call go"
+      "text": "how did the call go?"
     },
     {
-      "text": "call's done. did it go okay or do we need to talk about it"
+      "text": "call's done. did it get sorted?"
     },
     {
-      "text": "that was a long one. survived?"
+      "text": "that was a long one. you okay?"
     }
   ],
   "workingLate": [
     {
-      "text": "it's past 4. why are you still here"
+      "text": "still here? don't stay too late"
     },
     {
-      "text": "working late again. go home soon ok"
+      "text": "working late again? go home soon"
     },
     {
-      "text": "the work isn't going anywhere. you should though"
+      "text": "the work will still be there tomorrow. you should be rested for it"
     }
   ]
 }
