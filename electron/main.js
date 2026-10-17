@@ -381,7 +381,7 @@ function startUpdates() {
   });
   const check = () => autoUpdater.checkForUpdates().catch((error) => console.warn(`[update] ${error.message}`));
   setTimeout(check, 30_000);
-  setInterval(check, 2 * 60 * 60_000);
+  setInterval(check, 10 * 60_000);
   return check;
 }
 

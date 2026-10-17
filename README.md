@@ -63,7 +63,7 @@ Notes for Linux:
 
 ## Updates
 
-She updates herself. Every couple of hours she checks the
+She updates herself. Every 10 minutes (and 30 seconds after she starts) she checks the
 [release page](https://github.com/shahloabdullayeva/deskpet/releases/latest), downloads a newer
 version in the background, and restarts into it the next time nobody has touched the computer for
 two minutes ("brb, getting an update"). Right-click her for **Check for updates** or, once one is

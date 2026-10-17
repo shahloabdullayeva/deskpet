@@ -76,7 +76,7 @@ jobs:
             **maomao.rpm**: Fedora. `sudo dnf install ./maomao.rpm`, then open Maomao from your apps.
             **Maomao.AppImage**: any distro. `chmod +x Maomao.AppImage && ./Maomao.AppImage`
 
-            Maomao updates herself: she checks every couple of hours, downloads the new version in the background and restarts into it when you step away for a couple of minutes (the portable .exe doesn't update itself).
+            Maomao updates herself: she checks every 10 minutes, downloads the new version in the background and restarts into it when you step away for a couple of minutes (the portable .exe doesn't update itself).
 
             Built from ${{ github.sha }}.
           files: |
