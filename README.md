@@ -6,8 +6,10 @@ you during the work day.
 
 ![Maomao in 3D: idle, talking, happy, annoyed, sleepy, and the cat-girl look](docs/maomao.png)
 
-She is a small 3D character drawn live with three.js, so she turns her head to follow your
-mouse, sways, blinks and bounces instead of being a flat picture.
+She is a small 3D character drawn live with three.js: a little person with a neck, shoulders,
+arms that bend at the elbow, hands tucked in her sleeves and legs that step when she walks, lit
+with soft shading so she looks round. She turns her head to follow your mouse, breathes, shifts
+her weight, blinks and bounces instead of being a flat picture.
 
 ## Install (Windows)
 
@@ -32,6 +34,13 @@ sudo apt install ./maomao.deb
 
 and open **Maomao** from your apps menu. This is the one to use on Ubuntu 24.04.
 
+**Fedora:** download
+**[maomao.rpm](https://github.com/shahloabdullayeva/deskpet/releases/latest/download/maomao.rpm)**, then
+
+```bash
+sudo dnf install ./maomao.rpm
+```
+
 **Any other distro:** download
 **[Maomao.AppImage](https://github.com/shahloabdullayeva/deskpet/releases/latest/download/Maomao.AppImage)**, then
 
@@ -51,6 +60,21 @@ Notes for Linux:
   Support" extension; without it, right-click her for the same menu.
 - **Start with my computer** adds her to `~/.config/autostart`.
 - If the graphics card can't do 3D, she shows as a flat picture instead of not showing at all.
+
+## Updates
+
+She updates herself. Every couple of hours she checks the
+[release page](https://github.com/shahloabdullayeva/deskpet/releases/latest), downloads a newer
+version in the background, and restarts into it the next time nobody has touched the computer for
+two minutes ("brb, getting an update"). Right-click her for **Check for updates** or, once one is
+downloaded, **Restart to update**. The menu shows which version is running.
+
+- Windows installer and Linux AppImage: fully automatic.
+- Linux .deb and .rpm: automatic too, but Linux asks for your password to install it.
+- Maomao-Portable.exe doesn't update itself; download it again.
+
+Every push to GitHub builds a new version (0.2.&lt;build number&gt;), so any change to her reaches
+everyone on their own.
 
 ## Using her
 
@@ -114,8 +138,11 @@ change expression; `electron/pet.js` handles the mouse (petting, clicks, carryin
 resizing) and talks to `electron/main.js`, which moves the window, does the falling and
 bouncing, and tells her where the mouse is so she can look at it. Custom pictures in
 `me/character/` (idle.png, talk.png, ...) still replace the 3D model if you add them. Pushing to GitHub builds the Windows
-installer and the Linux AppImage and .deb (`.github/workflows/build.yml`) and updates the release page.
-`npm run dist:linux` builds the Linux ones locally.
+installer and the Linux AppImage, .deb and .rpm (`.github/workflows/build.yml`), stamps them
+version 0.2.&lt;run number&gt; and updates the release page together with `latest.yml` and
+`latest-linux.yml`, which is what the installed copies check (electron-updater, generic provider
+pointed at `releases/latest/download`). `npm run dist:linux` builds the Linux ones locally (the
+.rpm needs `rpmbuild`).
 
 Claude's reply text is cleaned before it's shown: emojis are removed, and so are wrapper tags like
 `<answer>` and any `<thinking>` block that sometimes come back with the reply.

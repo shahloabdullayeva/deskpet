@@ -334,6 +334,39 @@ function endCall() {
   if (minutes >= 3 && Math.random() < 0.6) setTimeout(() => pet.afterCall(minutes).catch(() => {}), 20_000);
 }
 
+let updateReady = false;
+
+function startUpdates() {
+  if (!app.isPackaged || process.env.PORTABLE_EXECUTABLE_DIR || process.env.DESKPET_NO_UPDATES) return;
+  let autoUpdater;
+  try {
+    ({ autoUpdater } = require("electron-updater"));
+  } catch {
+    return;
+  }
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.logger = null;
+  autoUpdater.on("error", (error) => console.warn(`[update] ${error.message}`));
+  autoUpdater.on("update-downloaded", () => {
+    updateReady = true;
+    refreshTray();
+    const install = setInterval(() => {
+      const busy = chatWin && !chatWin.isDestroyed() && chatWin.isFocused();
+      if (busy || powerMonitor.getSystemIdleTime() < 120) return;
+      clearInterval(install);
+      send("say", { text: "brb, getting an update", mood: "happy", chime: false });
+      setTimeout(() => autoUpdater.quitAndInstall(true, true), 2500);
+    }, 30_000);
+  });
+  const check = () => autoUpdater.checkForUpdates().catch((error) => console.warn(`[update] ${error.message}`));
+  setTimeout(check, 30_000);
+  setInterval(check, 2 * 60 * 60_000);
+  return check;
+}
+
+let checkUpdates;
+
 function menu() {
   const quietFor = (minutes) => () => (hiddenUntil = Date.now() + minutes * 60_000);
   return Menu.buildFromTemplate([
@@ -351,6 +384,9 @@ function menu() {
     { label: "Start with my computer", type: "checkbox", checked: startsWithComputer(), click: (item) => (setStartup(item.checked), refreshTray()) },
     { type: "separator" },
     { label: "Settings…", click: openSettings },
+    updateReady
+      ? { label: "Restart to update", click: () => require("electron-updater").autoUpdater.quitAndInstall(true, true) }
+      : { label: `Check for updates (v${app.getVersion()})`, enabled: Boolean(checkUpdates), click: () => checkUpdates?.() },
     { type: "separator" },
     { label: "Quit", click: () => app.quit() },
   ]);
@@ -441,6 +477,8 @@ app.whenReady().then(() => {
   });
 
   pet.start();
+  checkUpdates = startUpdates();
+  refreshTray();
 });
 
 app.on("before-quit", () => pet?.stop());

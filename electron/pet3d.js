@@ -20,14 +20,6 @@ const HEAD_R = 0.6;
 const HEAD_C = new THREE.Vector3(0, 0.46, 0);
 const HEAD_SCALE = [1.06, 0.97, 1];
 
-function toonRamp() {
-  const data = new Uint8Array([120, 120, 120, 255, 200, 200, 200, 255, 255, 255, 255, 255]);
-  const ramp = new THREE.DataTexture(data, 3, 1, THREE.RGBAFormat);
-  ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
-  ramp.needsUpdate = true;
-  return ramp;
-}
-
 function outlineMaterial(color, width) {
   const material = new THREE.MeshBasicMaterial({ color, side: THREE.BackSide });
   material.onBeforeCompile = (shader) => {
@@ -94,24 +86,33 @@ export function createPet(canvas, { onPetted } = {}) {
   camera.position.set(0, 1.45, 6.9);
   camera.lookAt(0, 1.15, 0);
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xb9a7c2, 1.6));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.9);
+  scene.add(new THREE.HemisphereLight(0xfff6ee, 0x9d8fb0, 1.5));
+  const sun = new THREE.DirectionalLight(0xfff1e4, 2.3);
   sun.position.set(-2.5, 4, 5);
   scene.add(sun);
+  const fill = new THREE.DirectionalLight(0xdfe8ff, 0.6);
+  fill.position.set(3, 1.5, 3);
+  scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xffffff, 1.4);
+  rim.position.set(1.5, 3, -4);
+  scene.add(rim);
 
-  const ramp = toonRamp();
+  const ROUGH = { hair: 0.6, skin: 0.62, shoe: 0.5, ribbon: 0.55 };
+  const shade = (color, key, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: ROUGH[key] ?? 0.82, metalness: 0, ...extra });
   const palette = { ...PALETTES.maomao };
   const mats = {};
   for (const key of ["hair", "skin", "outfit", "outfitDark", "collar", "cuff", "skirt", "ribbon", "shoe"]) {
-    mats[key] = new THREE.MeshToonMaterial({ color: palette[key], gradientMap: ramp });
+    mats[key] = shade(palette[key], key);
   }
-  mats.hairBack = new THREE.MeshToonMaterial({ color: palette.hair, gradientMap: ramp, side: THREE.DoubleSide });
+  mats.hairBack = shade(palette.hair, "hair", { side: THREE.DoubleSide });
+  mats.sleeve = shade(palette.outfit, "outfit", { side: THREE.DoubleSide });
+  mats.sleeveDark = shade(palette.outfitDark, "outfit", { side: THREE.DoubleSide });
   mats.hairShine = new THREE.MeshBasicMaterial({ color: palette.hairShine });
-  mats.beadRed = new THREE.MeshToonMaterial({ color: "#b9364b", gradientMap: ramp });
-  mats.beadTeal = new THREE.MeshToonMaterial({ color: "#3aa29d", gradientMap: ramp });
-  mats.leaf = new THREE.MeshToonMaterial({ color: "#6aa56a", gradientMap: ramp });
-  mats.earInner = new THREE.MeshToonMaterial({ color: palette.outfitDark, gradientMap: ramp });
-  const outline = outlineMaterial(palette.ink, 0.022);
+  mats.beadRed = shade("#b9364b", "hair");
+  mats.beadTeal = shade("#3aa29d", "hair");
+  mats.leaf = shade("#6aa56a");
+  mats.earInner = shade(palette.outfitDark);
+  const outline = outlineMaterial(palette.ink, 0.018);
   const thinOutline = outlineMaterial(palette.ink, 0.012);
 
   const root = new THREE.Group();
@@ -121,7 +122,8 @@ export function createPet(canvas, { onPetted } = {}) {
   const head = new THREE.Group();
   holder.position.y = 2.3;
   rig.position.y = -2.3;
-  head.position.y = 1.12;
+  head.position.y = 1.63;
+  head.scale.setScalar(0.58);
   scene.add(root);
   root.add(holder);
   holder.add(rig);
@@ -150,19 +152,34 @@ export function createPet(canvas, { onPetted } = {}) {
     return mesh;
   }
 
-  const feet = [-1, 1].map((side) => add(body, new THREE.SphereGeometry(0.11, 16, 12), mats.shoe, { pos: [side * 0.14, 0.06, 0.06], scale: [1, 0.6, 1.4] }));
-  add(body, new THREE.CylinderGeometry(0.34, 0.46, 0.42, 28), mats.skirt, { pos: [0, 0.27, 0] });
-  const robe = [[0, 0.4], [0.46, 0.4], [0.44, 0.58], [0.39, 0.82], [0.31, 0.97], [0.17, 1.06], [0, 1.08]].map(([x, y]) => new THREE.Vector2(x, y));
-  add(body, new THREE.LatheGeometry(robe, 32), mats.outfit);
-  add(body, new THREE.CylinderGeometry(0.43, 0.445, 0.08, 32), mats.cuff, { pos: [0, 0.6, 0], line: null });
-  add(body, new THREE.TorusGeometry(0.17, 0.045, 10, 28), mats.collar, { pos: [0, 1.03, 0.01], rot: [Math.PI / 2 + 0.25, 0, 0], line: thinOutline });
-  add(body, new THREE.CylinderGeometry(0.08, 0.09, 0.16, 12), mats.skin, { pos: [0, 1.1, 0], line: null });
+  const legs = [-1, 1].map((side) => {
+    const leg = new THREE.Group();
+    leg.position.set(side * 0.1, 0.62, 0);
+    body.add(leg);
+    between(leg, new THREE.CapsuleGeometry(0.052, 0.34, 6, 12), mats.skin, [0, -0.08, 0], [0, -0.5, 0], { line: thinOutline });
+    add(leg, new THREE.SphereGeometry(0.075, 16, 12), mats.shoe, { pos: [0, -0.57, 0.035], scale: [0.95, 0.6, 1.55], line: thinOutline });
+    return leg;
+  });
+  add(body, new THREE.CylinderGeometry(0.25, 0.3, 0.22, 28), mats.skirt, { pos: [0, 0.3, 0], scale: [1, 1, 0.8] });
+  const robe = [[0, 0.33], [0.31, 0.33], [0.28, 0.5], [0.24, 0.72], [0.2, 0.88], [0.215, 1.0], [0.25, 1.14], [0.26, 1.27], [0.245, 1.35], [0.19, 1.41], [0.08, 1.46], [0, 1.465]].map(([x, y]) => new THREE.Vector2(x, y));
+  add(body, new THREE.LatheGeometry(robe, 40), mats.outfit, { scale: [1, 1, 0.78] });
+  add(body, new THREE.CylinderGeometry(0.212, 0.205, 0.08, 32), mats.cuff, { pos: [0, 0.9, 0], scale: [1, 1, 0.8], line: thinOutline });
+  add(body, new THREE.CylinderGeometry(0.31, 0.315, 0.035, 32), mats.outfitDark, { pos: [0, 0.345, 0], scale: [1, 1, 0.8], line: null });
+  add(body, new THREE.TorusGeometry(0.085, 0.025, 10, 28), mats.collar, { pos: [0, 1.445, 0.02], rot: [Math.PI / 2 + 0.3, 0, 0], line: thinOutline });
+  add(body, new THREE.CylinderGeometry(0.048, 0.056, 0.16, 14), mats.skin, { pos: [0, 1.52, 0], line: null });
   const arms = [-1, 1].map((side) => {
     const arm = new THREE.Group();
-    arm.position.set(side * 0.33, 0.95, 0);
+    arm.position.set(side * 0.27, 1.36, 0);
     body.add(arm);
-    between(arm, new THREE.CapsuleGeometry(0.12, 0.3, 6, 14), mats.outfit, [0, 0, 0], [-side * 0.2, -0.32, 0.34]);
-    between(arm, new THREE.CylinderGeometry(0.13, 0.145, 0.07, 18), mats.outfitDark, [-side * 0.19, -0.3, 0.32], [-side * 0.225, -0.35, 0.39], { line: thinOutline });
+    add(arm, new THREE.SphereGeometry(0.085, 16, 12), mats.outfit, { line: null });
+    between(arm, new THREE.CapsuleGeometry(0.075, 0.22, 6, 14), mats.outfit, [0, 0, 0], [0, -0.3, 0]);
+    const elbow = new THREE.Group();
+    elbow.position.set(0, -0.3, 0);
+    arm.add(elbow);
+    add(elbow, new THREE.CylinderGeometry(0.078, 0.125, 0.3, 18, 1, true), mats.sleeve, { pos: [0, -0.15, 0], line: thinOutline });
+    add(elbow, new THREE.CylinderGeometry(0.128, 0.128, 0.04, 18, 1, true), mats.sleeveDark, { pos: [0, -0.3, 0], line: null });
+    add(elbow, new THREE.SphereGeometry(0.05, 14, 10), mats.skin, { pos: [0, -0.33, 0.01], scale: [0.8, 1.1, 0.6], line: thinOutline });
+    arm.userData.elbow = elbow;
     return arm;
   });
 
@@ -173,16 +190,17 @@ export function createPet(canvas, { onPetted } = {}) {
   for (const [x, y, r] of [[0.05, 0.26, -0.7], [-0.03, 0.17, 0.6], [0.05, 0.1, -0.5]]) {
     add(herb, new THREE.SphereGeometry(0.05, 10, 8), mats.leaf, { pos: [x, y, 0], rot: [0, 0, r], scale: [1, 0.45, 0.6], line: thinOutline });
   }
-  const herbRest = new THREE.Vector3(0.02, 0.55, 0.48);
-  const herbNose = new THREE.Vector3(0.05, 1.38, 0.66);
+  const herbRest = new THREE.Vector3(0.02, 0.86, 0.3);
+  const herbNose = new THREE.Vector3(0.04, 1.55, 0.44);
   herb.position.copy(herbRest);
 
   const tail = new THREE.Group();
-  tail.position.set(0, 0.45, -0.33);
+  tail.position.set(0, 0.62, -0.2);
   body.add(tail);
   const tailCurve = new THREE.CatmullRomCurve3([[0, 0, 0], [0.12, 0.03, -0.25], [0.34, 0.3, -0.34], [0.42, 0.62, -0.22], [0.32, 0.8, -0.05]].map((p) => new THREE.Vector3(...p)));
   add(tail, new THREE.TubeGeometry(tailCurve, 32, 0.06, 10), mats.hair, { only: "catgirl" });
 
+  add(head, new THREE.SphereGeometry(0.032, 12, 10), mats.skin, { pos: [0, 0.29, 0.582], scale: [0.75, 0.9, 0.6], line: null });
   const skull = add(head, new THREE.SphereGeometry(HEAD_R, 48, 36), mats.skin, { pos: HEAD_C.toArray(), scale: HEAD_SCALE });
 
   const faceCanvas = Object.assign(document.createElement("canvas"), { width: FACE_W, height: FACE_H });
@@ -242,7 +260,7 @@ export function createPet(canvas, { onPetted } = {}) {
 
   const sprites = [];
   const spriteTextures = { heart: heartTexture("#ff6b93"), bang: textTexture("!", "#e2455f"), z: textTexture("z", "#7f86e8"), note: textTexture("?", "#5b8fd6") };
-  function emit(kind, { at = [(Math.random() < 0.5 ? -1 : 1) * 0.5, 1.75, 0.3], scale = 0.26, life = 1.3, rise = 0.45, drift = 0.15 } = {}) {
+  function emit(kind, { at = [(Math.random() < 0.5 ? -1 : 1) * 0.45, 2.1, 0.3], scale = 0.26, life = 1.3, rise = 0.45, drift = 0.15 } = {}) {
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: spriteTextures[kind], transparent: true, depthWrite: false }));
     sprite.position.set(at[0] + (Math.random() - 0.5) * drift, at[1], at[2]);
     sprite.scale.setScalar(scale);
@@ -305,6 +323,8 @@ export function createPet(canvas, { onPetted } = {}) {
     Object.assign(palette, PALETTES[state.character], colors);
     for (const key of ["hair", "skin", "outfit", "outfitDark", "collar", "cuff", "skirt", "ribbon", "shoe"]) mats[key].color.set(palette[key]);
     mats.hairBack.color.set(palette.hair);
+    mats.sleeve.color.set(palette.outfit);
+    mats.sleeveDark.color.set(palette.outfitDark);
     mats.hairShine.color.set(palette.hairShine);
     mats.earInner.color.set(palette.outfitDark);
     outline.color.set(palette.ink);
@@ -610,7 +630,7 @@ export function createPet(canvas, { onPetted } = {}) {
     state.surprise = Math.max(0, state.surprise - dt);
 
     if (state.face === "sleepy" && t > state.nextZ) {
-      emit("z", { at: [0.5, 1.75, 0.2], scale: 0.2, life: 2.4, rise: 0.45, drift: 0.05 });
+      emit("z", { at: [0.42, 2.15, 0.2], scale: 0.2, life: 2.4, rise: 0.45, drift: 0.05 });
       state.nextZ = t + 1.4;
     }
 
@@ -656,29 +676,41 @@ export function createPet(canvas, { onPetted } = {}) {
       }
     }
 
-    const breathe = 1 + Math.sin(t * (still ? 1.1 : 2)) * 0.012;
-    body.scale.set(1, breathe, 1);
+    const breath = Math.sin(t * (still ? 1.1 : 2));
+    body.scale.set(1 + breath * 0.006, 1 + breath * 0.01, 1 + breath * 0.008);
     let bob = 0;
     let wobble = 0;
+    const stride = Math.sin(t * 8);
+    const kick = state.held || state.airborne;
+    const shift = state.walking || kick || still ? 0 : Math.sin(t * 0.55);
+    body.position.x = shift * 0.012;
+    body.rotation.z = shift * 0.018;
+    head.rotation.z += -shift * 0.02;
     if (state.walking) {
-      bob = Math.abs(Math.sin(t * 11)) * 0.03;
-      wobble = Math.sin(t * 11) * 0.06;
-      feet[0].position.z = 0.06 + Math.sin(t * 11) * 0.09;
-      feet[1].position.z = 0.06 - Math.sin(t * 11) * 0.09;
-    } else {
-      feet[0].position.z = feet[1].position.z = 0.06;
+      bob = Math.abs(stride) * 0.025;
+      wobble = stride * 0.025;
     }
-    if (state.held || state.airborne) {
-      feet[0].position.y = 0.06 + Math.max(0, Math.sin(t * 9)) * 0.08;
-      feet[1].position.y = 0.06 + Math.max(0, -Math.sin(t * 9)) * 0.08;
-    } else {
-      feet[0].position.y = feet[1].position.y = 0.06;
+    for (const [i, leg] of legs.entries()) {
+      const side = i ? -1 : 1;
+      if (state.walking) leg.rotation.x = stride * 0.42 * side;
+      else if (kick) leg.rotation.x = Math.sin(t * 9 + i * Math.PI) * 0.5 - 0.2;
+      else leg.rotation.x = 0;
+      leg.position.y = 0.62 + (state.walking ? Math.max(0, stride * side) * 0.025 : 0);
     }
 
     const armLift = action === "stretch" ? bell * 2.3 : state.airborne ? 1.6 + Math.sin(t * 18) * 0.3 : state.held ? 0.7 : 0;
-    arms[0].rotation.z = -armLift * 0.55;
-    arms[1].rotation.z = armLift * 0.55;
-    arms[0].rotation.x = arms[1].rotation.x = -armLift * 0.5;
+    const lifted = Math.min(1, armLift / 1.2);
+    const swing = state.walking ? stride * 0.32 : 0;
+    for (const [i, arm] of arms.entries()) {
+      const side = i ? 1 : -1;
+      const elbow = arm.userData.elbow;
+      arm.rotation.z = side * (0.1 + armLift * 0.55);
+      arm.rotation.x = -0.12 - armLift * 0.5 + swing * side;
+      arm.position.y = 1.36 + breath * 0.006;
+      const tucked = state.walking ? 0.4 : 1;
+      elbow.rotation.x = -1.05 * tucked * (1 - lifted);
+      elbow.rotation.z = -side * 0.55 * tucked * (1 - lifted);
+    }
 
     herb.visible = action === "sniff";
     if (herb.visible) herb.position.lerpVectors(herbRest, herbNose, Math.min(1, bell * 1.6));
@@ -789,7 +821,7 @@ export function createPet(canvas, { onPetted } = {}) {
     land(speed = 0) {
       state.airborne = false;
       bounce(Math.min(1, speed / 25));
-      if (speed > 18) emit("bang", { at: [0.52, 1.85, 0.2], scale: 0.24, life: 0.9, rise: 0.2, drift: 0 });
+      if (speed > 18) emit("bang", { at: [0.44, 2.2, 0.2], scale: 0.24, life: 0.9, rise: 0.2, drift: 0 });
     },
     poke() {
       bounce(0.35);
@@ -817,7 +849,7 @@ export function createPet(canvas, { onPetted } = {}) {
       if (asleep) state.hops = 0;
     },
     wonder() {
-      emit("note", { at: [0.52, 1.85, 0.2], scale: 0.22, life: 1.6, rise: 0.25, drift: 0 });
+      emit("note", { at: [0.44, 2.2, 0.2], scale: 0.22, life: 1.6, rise: 0.25, drift: 0 });
     },
     cursor,
     partAt,

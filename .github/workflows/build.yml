@@ -19,13 +19,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npx electron-builder --win nsis portable
+      - run: npm version --no-git-tag-version --allow-same-version "0.2.${{ github.run_number }}"
+      - run: npx electron-builder --win nsis portable --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: Maomao-windows
           path: |
             dist/Maomao-Setup.exe
+            dist/Maomao-Setup.exe.blockmap
             dist/Maomao-Portable.exe
+            dist/latest.yml
 
   linux:
     runs-on: ubuntu-latest
@@ -35,15 +38,19 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y rpm
       - run: npm ci
       - run: npm test
-      - run: npx electron-builder --linux AppImage deb
+      - run: npm version --no-git-tag-version --allow-same-version "0.2.${{ github.run_number }}"
+      - run: npx electron-builder --linux AppImage deb rpm --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: Maomao-linux
           path: |
             dist/Maomao.AppImage
             dist/maomao.deb
+            dist/maomao.rpm
+            dist/latest-linux.yml
 
   release:
     needs: [windows, linux]
@@ -56,7 +63,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Maomao
+          name: Maomao 0.2.${{ github.run_number }}
           make_latest: true
           body: |
             **Windows**
@@ -66,7 +73,10 @@ jobs:
 
             **Linux**
             **maomao.deb**: Ubuntu, Debian, Mint, Pop!_OS. `sudo apt install ./maomao.deb`, then open Maomao from your apps.
+            **maomao.rpm**: Fedora. `sudo dnf install ./maomao.rpm`, then open Maomao from your apps.
             **Maomao.AppImage**: any distro. `chmod +x Maomao.AppImage && ./Maomao.AppImage`
+
+            Maomao updates herself: she checks every couple of hours, downloads the new version in the background and restarts into it when you step away for a couple of minutes (the portable .exe doesn't update itself).
 
             Built from ${{ github.sha }}.
           files: |
@@ -74,3 +84,7 @@ jobs:
             dist/Maomao-Portable.exe
             dist/Maomao.AppImage
             dist/maomao.deb
+            dist/maomao.rpm
+            dist/Maomao-Setup.exe.blockmap
+            dist/latest.yml
+            dist/latest-linux.yml

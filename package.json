@@ -8,10 +8,11 @@
     "start": "electron .",
     "test": "node --test",
     "dist": "electron-builder --win",
-    "dist:linux": "electron-builder --linux AppImage deb"
+    "dist:linux": "electron-builder --linux AppImage deb rpm --publish never"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
+    "electron-updater": "^6.8.9",
     "three": "^0.169.0"
   },
   "devDependencies": {
@@ -48,11 +49,17 @@
     "portable": {
       "artifactName": "Maomao-Portable.exe"
     },
-    "publish": null,
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/shahloabdullayeva/deskpet/releases/latest/download"
+      }
+    ],
     "linux": {
       "target": [
         "AppImage",
-        "deb"
+        "deb",
+        "rpm"
       ],
       "icon": "electron/icon.png",
       "category": "Utility",
@@ -65,6 +72,9 @@
     },
     "deb": {
       "artifactName": "maomao.deb"
+    },
+    "rpm": {
+      "artifactName": "maomao.rpm"
     }
   },
   "homepage": "https://github.com/shahloabdullayeva/deskpet",
