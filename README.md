@@ -8,7 +8,7 @@ you during the work day.
 
 She is a small 3D character drawn live with three.js: a little person with a neck, shoulders,
 arms that bend at the elbow, hands tucked in her sleeves and legs that step when she walks, lit
-with soft shading so she looks round. She turns her head to follow your mouse, breathes, shifts
+with soft shading so she looks round. She glances at your mouse now and then, breathes, shifts
 her weight, blinks and bounces instead of being a flat picture.
 
 ## Install (Windows)
@@ -121,7 +121,15 @@ everyone on their own.
 - **Pick her up and throw her.** Drag her and she dangles and kicks; let go and she falls to the
   bottom of the screen and bounces. Throw her sideways and she can fly onto your other screen.
   When she's pinned she stays exactly where you drop her.
-- **She watches you:** her head and eyes follow the mouse while it's near her.
+- **She notices you, barely:** when the mouse is close she glances at it for a second or two,
+  then loses interest for a while. On Windows, wiggling it right next to her can occasionally
+  get her to walk after it, at most once every 10 minutes.
+- **Change her clothes** (right-click, Change clothes): her servant robe, the Jade Pavilion
+  lady-in-waiting outfit with a red flower, the garden party look with the silver hairpin and
+  lipstick, the Verdigris House dress-up with gold hairpins, or her apothecary shop apron. She
+  spins, says something about it, and remembers what she's wearing.
+- **Attitude:** serious, unimpressed and a little arrogant, like Maomao. She cares, she just
+  won't make a fuss about it.
 - Now and then she walks a few steps, does a little hop where she stands, sniffs her herbs,
   stretches or yawns. She never jumps off to somewhere else on the screen by herself.
 - **Awake whenever you're at the computer**, any day of the week. She dozes off once you've been

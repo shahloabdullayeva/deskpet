@@ -140,11 +140,30 @@ function look() {
   return {
     character: settings.character || "maomao",
     colors: settings.look || {},
+    outfit: OUTFITS[place.outfit] ? place.outfit : "servant",
     images,
     wander: settings.wander !== false,
     volume: settings.volume ?? 0.7,
     size,
   };
+}
+
+const OUTFITS = {
+  servant: { label: "Servant robe", line: "laundry clothes. practical. unlike most of your ideas" },
+  jade: { label: "Jade Pavilion lady-in-waiting", line: "lady-in-waiting again. someone competent has to taste the food" },
+  garden: { label: "Garden party (with the hairpin)", line: "the hairpin stays. don't ask" },
+  verdigris: { label: "Verdigris House dress-up", line: "the madam would charge you for looking. so would i" },
+  shop: { label: "Apothecary shop apron", line: "back to real work. don't touch the shelves" },
+};
+
+function wear(outfit) {
+  place = { ...place, outfit };
+  try {
+    fs.writeFileSync(PLACE, JSON.stringify(place));
+  } catch {}
+  send("look", look());
+  send("say", { text: OUTFITS[outfit].line, mood: "talk" });
+  refreshTray();
 }
 
 function createWindow() {
@@ -572,16 +591,22 @@ function chaseStep() {
   }
 }
 
+let nextCursorChase = 0;
+
 function watchCursorChase(point) {
   if (SHAPED || chase || place.pinned || pet.feeling === "sleepy" || pet.config.pet?.wander === false || !alive(win)) return;
   const now = Date.now();
+  if (now < nextCursorChase) return;
   trail = trail.filter((p) => now - p.t < 700).concat({ x: point.x, y: point.y, t: now });
   const [x, y] = win.getPosition();
-  const near = Math.abs(point.x - (x + width() / 2)) < 350 && point.y > y - 200 && point.y < y + height() + 40;
+  const near = Math.abs(point.x - (x + width() / 2)) < 200 && point.y > y - 120 && point.y < y + height() + 20;
   let path = 0;
   for (let i = 1; i < trail.length; i++) path += Math.hypot(trail[i].x - trail[i - 1].x, trail[i].y - trail[i - 1].y);
-  if (!near || path < 1100) return;
+  if (!near || path < 2200) return;
   trail = [];
+  nextCursorChase = now + 60_000;
+  if (Math.random() < 0.75) return;
+  nextCursorChase = now + 10 * 60_000;
   let last = point;
   startChase(() => {
     const now2 = screen.getCursorScreenPoint();
@@ -708,6 +733,9 @@ function menu() {
         { label: "Suspicious mushroom", click: () => feed("mushroom") },
       ],
     },
+    ...((pet.config.pet?.character || "maomao") === "maomao"
+      ? [{ label: "Change clothes", submenu: Object.entries(OUTFITS).map(([name, { label }]) => ({ label, type: "radio", checked: (place.outfit || "servant") === name, click: () => wear(name) })) }]
+      : []),
     alive(toyWin) ? { label: "Put the toy away", click: closeToy } : { label: "Play with her (herb toy)", click: openToy },
     pet.feel().feeling === "sleepy"
       ? { label: "Wake up", click: () => pet.sleepNow(false) }

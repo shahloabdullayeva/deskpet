@@ -11,6 +11,14 @@ const PALETTES = {
   },
 };
 
+const OUTFITS = {
+  servant: {},
+  jade: { outfit: "#eaa9ae", outfitDark: "#c86f7c", collar: "#fbe6da", cuff: "#e2b552", skirt: "#9b2335", ribbon: "#c8303a" },
+  garden: { outfit: "#b6c4ec", outfitDark: "#8798d0", collar: "#f5f3fb", cuff: "#e4e7f0", skirt: "#46578f", ribbon: "#e4e7f0", lips: "#c8303a" },
+  verdigris: { outfit: "#bd3442", outfitDark: "#8c1f2d", collar: "#f0c75e", cuff: "#f0c75e", skirt: "#2e2038", ribbon: "#f0c75e", shoe: "#2a1a22", lips: "#b81d35" },
+  shop: { outfit: "#6f8193", outfitDark: "#55677a", collar: "#e6dcc8", cuff: "#a88a5c", skirt: "#5a4636", ribbon: "#a88a5c" },
+};
+
 const FACE_W = 608;
 const FACE_H = 422;
 const FACE_PHI = 1.9;
@@ -169,14 +177,16 @@ export function createPet(canvas, { onPetted } = {}) {
   head.userData.part = "head";
 
   const parts = { maomao: [], catgirl: [] };
+  const dress = { jade: [], garden: [], verdigris: [], shop: [] };
 
-  function add(parent, geometry, material, { pos, rot, scale, line = outline, only } = {}) {
+  function add(parent, geometry, material, { pos, rot, scale, line = outline, only, outfit } = {}) {
     const mesh = new THREE.Mesh(geometry, material);
     if (pos) mesh.position.set(...pos);
     if (rot) mesh.rotation.set(...rot);
     if (scale) mesh.scale.set(...scale);
     if (line) mesh.add(new THREE.Mesh(geometry, line));
     if (only) parts[only].push(mesh);
+    if (outfit) dress[outfit].push(mesh);
     parent.add(mesh);
     return mesh;
   }
@@ -204,6 +214,8 @@ export function createPet(canvas, { onPetted } = {}) {
   add(body, new THREE.CylinderGeometry(0.27, 0.275, 0.035, 32), mats.outfitDark, { pos: [0, 0.345, 0], scale: [1, 1, 0.8], line: null });
   add(body, new THREE.TorusGeometry(0.085, 0.025, 10, 28), mats.collar, { pos: [0, 1.445, 0.02], rot: [Math.PI / 2 + 0.3, 0, 0], line: thinOutline });
   add(body, new THREE.CylinderGeometry(0.048, 0.056, 0.16, 14), mats.skin, { pos: [0, 1.52, 0], line: null });
+  const apron = [[0.282, 0.38], [0.252, 0.5], [0.212, 0.72], [0.18, 0.88]].map(([x, y]) => new THREE.Vector2(x, y));
+  add(body, new THREE.LatheGeometry(apron, 20, -0.85, 1.7), shade("#efe6d2", "paper", { side: THREE.DoubleSide }), { scale: [1, 1, 0.78], line: thinOutline, outfit: "shop" });
   const arms = [-1, 1].map((side) => {
     const arm = new THREE.Group();
     arm.position.set(side * 0.225, 1.36, 0);
@@ -330,6 +342,26 @@ export function createPet(canvas, { onPetted } = {}) {
   }
   add(head, new THREE.SphereGeometry(0.055, 12, 10), mats.ribbon, { pos: [0, 1.0, -0.12], line: thinOutline, only: "maomao" });
 
+  const silver = shade("#dfe3ec", "ribbon", { metalness: 0.5, roughness: 0.35 });
+  const gold = shade("#e8b84a", "ribbon", { metalness: 0.45, roughness: 0.4 });
+  const pearl = shade("#fbf7f0", "ribbon");
+  between(head, new THREE.CylinderGeometry(0.012, 0.012, 0.62, 8), silver, [-0.3, 1.13, -0.22], [0.28, 0.9, -0.36], { line: thinOutline, outfit: "garden" });
+  add(head, new THREE.SphereGeometry(0.05, 12, 10), pearl, { pos: [-0.31, 1.135, -0.21], line: thinOutline, outfit: "garden" });
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    add(head, new THREE.SphereGeometry(0.035, 10, 8), silver, { pos: [-0.31 + Math.cos(a) * 0.055, 1.135 + Math.sin(a) * 0.055, -0.23], scale: [1, 1, 0.5], line: null, outfit: "garden" });
+  }
+  for (const side of [-1, 1]) {
+    between(head, new THREE.CylinderGeometry(0.014, 0.014, 0.56, 8), gold, [side * 0.3, 1.2, -0.2], [side * -0.2, 0.86, -0.38], { line: thinOutline, outfit: "verdigris" });
+    add(head, new THREE.SphereGeometry(0.05, 12, 10), gold, { pos: [side * 0.31, 1.205, -0.19], line: thinOutline, outfit: "verdigris" });
+    for (const [y, material] of [[1.12, mats.beadRed], [1.05, gold], [0.98, mats.beadRed]]) add(head, new THREE.SphereGeometry(0.026, 8, 8), material, { pos: [side * 0.34, y, -0.17], line: null, outfit: "verdigris" });
+  }
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    add(head, new THREE.SphereGeometry(0.075, 10, 8), mats.ribbon, { pos: [0.37 + Math.cos(a) * 0.08, 1.0 + Math.sin(a) * 0.08, 0.3], rot: [0, 0, a], scale: [1, 0.6, 0.45], line: thinOutline, outfit: "jade" });
+  }
+  add(head, new THREE.SphereGeometry(0.045, 12, 10), gold, { pos: [0.37, 1.0, 0.34], line: thinOutline, outfit: "jade" });
+
   const ears = [-1, 1].map((side) => {
     const ear = new THREE.Group();
     ear.position.set(side * 0.38, 0.98, -0.04);
@@ -359,6 +391,7 @@ export function createPet(canvas, { onPetted } = {}) {
 
   const state = {
     character: "maomao",
+    outfit: "servant",
     face: "idle",
     mouthOpen: false,
     action: null,
@@ -397,6 +430,8 @@ export function createPet(canvas, { onPetted } = {}) {
     blush: 0,
     cursor: null,
     cursorSeen: -99,
+    glanceUntil: 0,
+    ignoreUntil: 0,
     wanderYaw: 0,
     nextWander: 0,
     nextZ: 0,
@@ -408,10 +443,13 @@ export function createPet(canvas, { onPetted } = {}) {
     state.character = name === "catgirl" ? "catgirl" : "maomao";
     for (const mesh of parts.maomao) mesh.visible = state.character === "maomao";
     for (const mesh of parts.catgirl) mesh.visible = state.character === "catgirl";
+    for (const [name, meshes] of Object.entries(dress)) for (const mesh of meshes) mesh.visible = state.character === "maomao" && state.outfit === name;
   }
 
   function setColors(colors = {}) {
-    Object.assign(palette, PALETTES[state.character], colors);
+    const next = { ...PALETTES[state.character], ...(state.character === "maomao" ? OUTFITS[state.outfit] : {}), ...colors };
+    for (const key of Object.keys(palette)) delete palette[key];
+    Object.assign(palette, next);
     for (const key of ["hair", "skin", "outfit", "outfitDark", "collar", "cuff", "skirt", "ribbon", "shoe"]) mats[key].color.set(palette[key]);
     mats.skin.emissive.set(palette.skin);
     mats.hairBack.color.set(palette.hair);
@@ -533,8 +571,8 @@ export function createPet(canvas, { onPetted } = {}) {
 
   function mouth(ctx, kind) {
     const cx = FACE_W / 2;
-    ctx.strokeStyle = palette.ink;
-    ctx.lineWidth = 8;
+    ctx.strokeStyle = palette.lips || palette.ink;
+    ctx.lineWidth = palette.lips ? 10 : 8;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.beginPath();
@@ -689,12 +727,18 @@ export function createPet(canvas, { onPetted } = {}) {
     projected.copy(headWorld).project(camera);
     const hx = ((projected.x + 1) / 2) * width;
     const hy = ((1 - projected.y) / 2) * height;
-    const recent = state.cursor && state.time - state.cursorSeen < 4;
+    const recent = state.cursor && state.time - state.cursorSeen < 2;
     if (!recent) return [state.wanderYaw, 0];
     const dx = state.cursor.x - hx;
     const dy = state.cursor.y - hy;
     const reach = Math.max(width, 260);
-    if (Math.hypot(dx, dy) > reach * 3.5) return [state.wanderYaw, 0];
+    if (Math.hypot(dx, dy) > reach * 1.3) return [state.wanderYaw, 0];
+    const t = state.time;
+    if (t > state.glanceUntil && t > state.ignoreUntil) {
+      state.glanceUntil = t + 1.2 + Math.random() * 1.5;
+      state.ignoreUntil = state.glanceUntil + 8 + Math.random() * 12;
+    }
+    if (t > state.glanceUntil) return [state.wanderYaw, 0];
     return [Math.max(-0.5, Math.min(0.5, Math.atan2(dx, reach * 1.1))), Math.max(-0.35, Math.min(0.4, Math.atan2(dy, reach * 1.2)))];
   }
 
@@ -942,8 +986,11 @@ export function createPet(canvas, { onPetted } = {}) {
   requestAnimationFrame(frame);
 
   return {
-    setLook({ character, colors } = {}) {
+    setLook({ character, colors, outfit } = {}) {
+      const changed = OUTFITS[outfit] && outfit !== state.outfit;
+      if (OUTFITS[outfit]) state.outfit = outfit;
       setCharacter(character);
+      if (changed && state.time > 1) this.spin();
       setColors(colors);
     },
     setFace(face) {

@@ -366,7 +366,7 @@ window.pet.on("look", (look) => {
   wander = look.wander !== false;
   rootEl.classList.toggle("catgirl", look.character === "catgirl");
   rootEl.style.setProperty("--size", `${look.size}px`);
-  model.setLook({ character: look.character, colors: look.colors });
+  model.setLook({ character: look.character, colors: look.colors, outfit: look.outfit });
   render();
 });
 window.pet.ready();
