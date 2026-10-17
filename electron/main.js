@@ -176,8 +176,15 @@ function createWindow() {
   });
   win.on("hide", () => send("visible", false));
   win.on("show", () => send("visible", true));
-  win.setAlwaysOnTop(true, "floating");
-  win.setVisibleOnAllWorkspaces(true);
+  if (LINUX) {
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    win.setAlwaysOnTop(true, "screen-saver");
+    win.on("blur", () => setTimeout(keepOnTop, 60));
+    setInterval(keepOnTop, 2000);
+  } else {
+    win.setAlwaysOnTop(true, "floating");
+    win.setVisibleOnAllWorkspaces(true);
+  }
   win.setIgnoreMouseEvents(true, { forward: true });
   win.loadFile(path.join(__dirname, "index.html"));
   let lastCursor = "";
@@ -190,6 +197,12 @@ function createWindow() {
     lastCursor = key;
     send("cursor", { x: point.x - x, y: point.y - y });
   }, 40);
+}
+
+function keepOnTop() {
+  if (!alive(win) || !win.isVisible() || quitting) return;
+  if (!win.isAlwaysOnTop()) win.setAlwaysOnTop(true, "screen-saver");
+  win.moveTop();
 }
 
 function clampSize(value) {
