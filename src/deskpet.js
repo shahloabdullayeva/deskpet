@@ -7,7 +7,7 @@ const { localParts, isWorkTime, isDue, toMinutes } = require("./clock");
 const { Brain, stripEmoji } = require("./brain");
 const { Memory } = require("./memory");
 
-const FACES = { sleepy: "sleepy", lonely: "pout", happy: "idle", calm: "idle" };
+const FACES = { sleepy: "sleepy", lonely: "pout", happy: "happy", calm: "idle" };
 const LONELY_AFTER_MINUTES = 150;
 
 const MOODS = { tap: "happy", reply: "happy", goodbye: "happy", morning: "happy", workingLate: "pout" };
@@ -83,7 +83,7 @@ class Deskpet {
 
   readChat() {
     try {
-      return JSON.parse(fs.readFileSync(this.chatPath, "utf8"));
+      return JSON.parse(fs.readFileSync(this.chatPath, "utf8")).map((entry) => ({ ...entry, text: stripEmoji(entry.text) }));
     } catch {
       return [];
     }

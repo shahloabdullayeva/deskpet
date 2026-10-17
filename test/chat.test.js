@@ -3,7 +3,7 @@ const assert = require("node:assert");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { Brain } = require("../src/brain");
+const { Brain, stripEmoji } = require("../src/brain");
 const { Memory } = require("../src/memory");
 
 function fakeClient(turns) {
@@ -51,4 +51,12 @@ test("chat uses the memory and reminder tools, then answers without emojis", asy
 test("chat without a key falls back to saved lines", async () => {
   const brain = new Brain({ config: { petName: "Maomao", brain: {} }, phrases: { reply: [{ text: "add a key" }] }, style: "", env: {} });
   assert.deepStrictEqual(await brain.chat([{ role: "him", text: "hi" }], { context: () => "" }), { text: "add a key", offline: true });
+});
+
+test("replies wrapped in answer tags show only the message", async () => {
+  const brain = new Brain({ config: { me: "", him: "Ali", petName: "Maomao", brain: {} }, phrases: {}, style: "", env: {} });
+  brain.client = fakeClient([{ stop_reason: "end_turn", content: [{ type: "text", text: "<answer>\neat something </answer>" }] }]);
+  const reply = await brain.chat([{ role: "him", text: "hi" }], { context: () => "", run: () => "" });
+  assert.strictEqual(reply.text, "eat something");
+  assert.strictEqual(stripEmoji("<thinking>he is tired</thinking>i <3 tea"), "i <3 tea");
 });

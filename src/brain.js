@@ -136,7 +136,7 @@ class Brain {
       ``,
       ...voice,
       ``,
-      `Rules: write like a text message, usually 1-3 short sentences. Never use emojis or emoticons.`,
+      `Rules: write like a text message, usually 1-3 short sentences. Never use emojis or emoticons. Reply with just the message as plain text, never wrapped in tags like <answer>.`,
       `If ${user} asks for help or a question, actually help like a capable assistant, still in your voice and as brief as the answer allows.`,
       `Care shows in small dry ways, never sappy, never guilt-tripping or controlling.`,
       `If ${user} mentions a song, a show or something they're watching, react like a friend would: if it sounds sad or heartbroken, gently check in on how they're feeling; if it's a love song, tease them a little and ask about the person they're thinking of.`,
@@ -191,8 +191,11 @@ const TOOLS = [
 
 const EMOJI = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\uFE0F\u200D]/gu;
 
+const TAGS = /<\/?(?:answer|response|reply|message|output|text|final|result)\b[^>]*>/gi;
+const HIDDEN = /<(thinking|reasoning|scratchpad|analysis)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi;
+
 function stripEmoji(text) {
-  return String(text).replace(EMOJI, "").replace(/[ \t]{2,}/g, " ").replace(/ +([,.!?])/g, "$1").trim();
+  return String(text).replace(HIDDEN, "").replace(TAGS, "").replace(EMOJI, "").replace(/[ \t]{2,}/g, " ").replace(/ +([,.!?])/g, "$1").trim();
 }
 
 function textOf(response) {

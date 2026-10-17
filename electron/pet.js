@@ -9,7 +9,20 @@ const rootEl = document.documentElement;
 
 const ACTIONS = { look: 3, sniff: 3.2, yawn: 2.6, stretch: 2.4 };
 
-const model = createPet(sceneEl, { onPetted: () => window.pet.petted() });
+const model = start3d();
+
+function start3d() {
+  try {
+    return createPet(sceneEl, { onPetted: () => window.pet.petted() });
+  } catch (error) {
+    console.warn(`3D failed, showing her picture instead: ${error.message}`);
+    const still = () => {};
+    const flat = { cursor: () => false, partAt: () => null };
+    for (const name of ["setLook", "setFace", "setMouth", "act", "setWalking", "setHeld", "drag", "setAirborne", "land", "poke", "spin", "jump", "hop", "wonder", "setAsleep"]) flat[name] = still;
+    flat.flat = true;
+    return flat;
+  }
+}
 
 let base = "idle";
 let face = "idle";
@@ -30,7 +43,7 @@ let chimes;
 
 function render() {
   model.setFace(face);
-  const image = (held && images.held) || (walking && images.walk) || images[face] || images.idle;
+  const image = (held && images.held) || (walking && images.walk) || images[face] || images.idle || (model.flat && "icon.png");
   art.hidden = !image;
   sceneEl.hidden = Boolean(image);
   if (image && art.src !== image) art.src = image;
@@ -77,7 +90,7 @@ function say({ text, mood, chime: ring }) {
   bubble.hidden = false;
   const speaking = mood === "talk" || !mood;
   setFace(speaking ? "talk" : mood);
-  model.jump();
+  if (!asleep()) model.jump();
 
   if (speaking) {
     let open = false;
@@ -107,19 +120,17 @@ function walk() {
   window.pet.walk(dx);
 }
 
-function hop() {
-  walking = true;
-  petEl.classList.add("hop-out");
-  setTimeout(() => window.pet.hop(), 450);
+function asleep() {
+  return base === "sleepy";
 }
 
 function live() {
-  setTimeout(live, 12000 + Math.random() * 25000);
-  if (talking || walking || hovered || held || airborne || face !== "idle" || document.hidden) return;
+  setTimeout(live, 15000 + Math.random() * 30000);
+  if (talking || walking || hovered || held || airborne || asleep() || face !== base || document.hidden) return;
   const roll = Math.random();
-  if (wander && !pinned && roll < 0.1) return hop();
-  if (wander && !pinned && roll < 0.36) return walk();
-  if (roll < 0.42) return model.wonder();
+  if (roll < 0.05) return model.hop();
+  if (wander && !pinned && base !== "pout" && roll < 0.27) return walk();
+  if (roll < 0.35) return model.wonder();
   const names = Object.keys(ACTIONS);
   act(names[Math.floor(Math.random() * names.length)]);
 }
@@ -230,7 +241,6 @@ window.pet.on("call", (on) => {
 });
 window.pet.on("size", (size) => {
   rootEl.style.setProperty("--size", `${size}px`);
-  model.jump();
 });
 window.pet.on("airborne", () => {
   airborne = true;
@@ -243,16 +253,6 @@ window.pet.on("landed", (speed) => {
   rootEl.classList.remove("flying");
   model.land(speed);
 });
-window.pet.on("hopped", () => {
-  petEl.classList.remove("hop-out");
-  petEl.classList.add("hop-in");
-  setTimeout(() => {
-    petEl.classList.remove("hop-in");
-    walking = false;
-    model.setWalking(0);
-    render();
-  }, 600);
-});
 window.pet.on("walked", () => {
   walking = false;
   model.setWalking(0);
@@ -260,6 +260,8 @@ window.pet.on("walked", () => {
 });
 window.pet.on("mood", (mood) => {
   base = mood;
+  model.setAsleep(mood === "sleepy");
+  if (mood === "sleepy" && walking) window.pet.stopWalking();
   if (!talking) setFace(mood);
 });
 window.pet.on("look", (look) => {

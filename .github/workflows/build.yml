@@ -1,4 +1,4 @@
-name: Windows app
+name: Build Maomao
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,19 +26,51 @@ jobs:
           path: |
             dist/Maomao-Setup.exe
             dist/Maomao-Portable.exe
-      # One page with the newest installer: github.com/<you>/deskpet/releases/latest
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx electron-builder --linux AppImage deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Maomao-linux
+          path: |
+            dist/Maomao.AppImage
+            dist/maomao.deb
+
+  release:
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Maomao for Windows
+          name: Maomao
           make_latest: true
           body: |
+            **Windows**
             **Maomao-Setup.exe**: install it (no admin needed). Maomao appears and opens Settings the first time. Paste a Claude API key there to chat with her.
             **Maomao-Portable.exe**: the same app with no install.
-
             Windows may say "Windows protected your PC" because the app isn't signed: click **More info**, then **Run anyway**.
+
+            **Linux**
+            **maomao.deb**: Ubuntu, Debian, Mint, Pop!_OS. `sudo apt install ./maomao.deb`, then open Maomao from your apps.
+            **Maomao.AppImage**: any distro. `chmod +x Maomao.AppImage && ./Maomao.AppImage`
 
             Built from ${{ github.sha }}.
           files: |
             dist/Maomao-Setup.exe
             dist/Maomao-Portable.exe
+            dist/Maomao.AppImage
+            dist/maomao.deb

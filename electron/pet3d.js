@@ -279,6 +279,8 @@ export function createPet(canvas, { onPetted } = {}) {
     spin: null,
     hopY: 0,
     hopV: 0,
+    asleep: false,
+    hops: 0,
     pet: 0,
     petTime: 0,
     lastPetted: -99,
@@ -612,18 +614,20 @@ export function createPet(canvas, { onPetted } = {}) {
       state.nextZ = t + 1.4;
     }
 
-    let [targetYaw, targetPitch] = lookTarget();
+    const still = state.asleep && !state.held && !state.airborne && state.face === "sleepy";
+    const sway = still ? 0.15 : 1;
+    let [targetYaw, targetPitch] = still ? [0, 0.28] : lookTarget();
     if (action === "look") targetYaw = Math.sin(progress * Math.PI * 2) * 0.6;
     if (action === "yawn") targetPitch = -0.25 * bell;
     if (action === "sniff") [targetYaw, targetPitch] = [-0.15 * bell, 0.18 * bell];
-    if (state.face === "sleepy") targetPitch = 0.22 + Math.sin(t * 1.6) * 0.06;
+    if (state.face === "sleepy" && !still) targetPitch = 0.22 + Math.sin(t * 1.6) * 0.06;
     if (state.pet > 0.6) targetPitch = 0.12;
     if (state.walking) targetYaw = 0;
     [state.yaw, state.yawV] = spring(state.yaw, targetYaw, state.yawV, 40, 9, dt);
     [state.pitch, state.pitchV] = spring(state.pitch, targetPitch, state.pitchV, 40, 9, dt);
     head.rotation.y = state.yaw;
     head.rotation.x = state.pitch;
-    head.rotation.z = Math.sin(t * 1.05) * 0.035 + (state.pet > 0.6 ? Math.sin(t * 5) * 0.08 : 0) + (action === "sniff" ? -0.1 * bell : 0);
+    head.rotation.z = (still ? 0.06 : Math.sin(t * 1.05) * 0.035) + (state.pet > 0.6 ? Math.sin(t * 5) * 0.08 : 0) + (action === "sniff" ? -0.1 * bell : 0);
 
     state.gazeTarget = action === "look" ? [Math.sin(progress * Math.PI * 2), 0] : [Math.max(-1, Math.min(1, (targetYaw - state.yaw) * 3 + targetYaw * 0.6)), Math.max(-1, Math.min(1, targetPitch * 1.5))];
     state.gaze[0] += (state.gazeTarget[0] - state.gaze[0]) * Math.min(1, dt * 12);
@@ -645,14 +649,19 @@ export function createPet(canvas, { onPetted } = {}) {
       if (state.hopV < -2) bounce(Math.min(1, -state.hopV / 8));
       state.hopY = 0;
       state.hopV = 0;
+      if (state.hops > 0) {
+        state.hops -= 1;
+        state.hopV = 2.4;
+        state.hopY = 0.001;
+      }
     }
 
-    const breathe = 1 + Math.sin(t * 2) * 0.012;
+    const breathe = 1 + Math.sin(t * (still ? 1.1 : 2)) * 0.012;
     body.scale.set(1, breathe, 1);
     let bob = 0;
     let wobble = 0;
     if (state.walking) {
-      bob = Math.abs(Math.sin(t * 11)) * 0.07;
+      bob = Math.abs(Math.sin(t * 11)) * 0.03;
       wobble = Math.sin(t * 11) * 0.06;
       feet[0].position.z = 0.06 + Math.sin(t * 11) * 0.09;
       feet[1].position.z = 0.06 - Math.sin(t * 11) * 0.09;
@@ -675,14 +684,14 @@ export function createPet(canvas, { onPetted } = {}) {
     if (herb.visible) herb.position.lerpVectors(herbRest, herbNose, Math.min(1, bell * 1.6));
 
     for (const [i, braid] of braids.entries()) {
-      braid.rotation.z = Math.sin(t * 2.1 + i * 1.4) * 0.12 - state.dangle * 0.8 + state.yawV * 0.02;
-      braid.rotation.x = Math.sin(t * 1.7 + i) * 0.08 + (state.walking ? Math.sin(t * 11) * 0.15 : 0);
+      braid.rotation.z = Math.sin(t * 2.1 + i * 1.4) * 0.12 * sway - state.dangle * 0.8 + state.yawV * 0.02;
+      braid.rotation.x = Math.sin(t * 1.7 + i) * 0.08 * sway + (state.walking ? Math.sin(t * 11) * 0.15 : 0);
     }
-    tail.rotation.y = Math.sin(t * 3.4) * 0.5;
-    tail.rotation.z = Math.sin(t * 1.7) * 0.15;
+    tail.rotation.y = Math.sin(t * 3.4 * sway) * 0.5 * sway;
+    tail.rotation.z = Math.sin(t * 1.7) * 0.15 * sway;
     for (const [i, ear] of ears.entries()) {
       const side = i ? 1 : -1;
-      ear.rotation.z = side * -0.42 + (t % 5 < 0.2 ? side * -0.25 : 0) + (state.pet > 0.6 ? side * 0.35 : 0);
+      ear.rotation.z = side * -0.42 + (!still && t % 5 < 0.2 ? side * -0.25 : 0) + (state.pet > 0.6 ? side * 0.35 : 0);
     }
 
     if (state.held) {
@@ -788,13 +797,24 @@ export function createPet(canvas, { onPetted } = {}) {
     },
     spin() {
       state.spin = { age: 0 };
-      state.hopV = 6.5;
+      state.hopV = 4.2;
       state.hopY = 0.001;
       emit("heart", { scale: 0.24 });
     },
     jump() {
-      state.hopV = 2.6;
+      if (state.hopY > 0) return;
+      state.hopV = 2.2;
       state.hopY = 0.001;
+    },
+    hop() {
+      if (state.hopY > 0 || state.asleep) return;
+      state.hopV = 2.4;
+      state.hopY = 0.001;
+      state.hops = Math.random() < 0.5 ? 1 : 0;
+    },
+    setAsleep(asleep) {
+      state.asleep = asleep;
+      if (asleep) state.hops = 0;
     },
     wonder() {
       emit("note", { at: [0.52, 1.85, 0.2], scale: 0.22, life: 1.6, rise: 0.25, drift: 0 });

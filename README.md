@@ -21,6 +21,37 @@ Can't install on this computer? Use
 **[Maomao-Portable.exe](https://github.com/shahloabdullayeva/deskpet/releases/latest/download/Maomao-Portable.exe)**,
 the same app without installing.
 
+## Install (Linux)
+
+**Ubuntu, Debian, Mint, Pop!_OS:** download
+**[maomao.deb](https://github.com/shahloabdullayeva/deskpet/releases/latest/download/maomao.deb)**, then
+
+```bash
+sudo apt install ./maomao.deb
+```
+
+and open **Maomao** from your apps menu. This is the one to use on Ubuntu 24.04.
+
+**Any other distro:** download
+**[Maomao.AppImage](https://github.com/shahloabdullayeva/deskpet/releases/latest/download/Maomao.AppImage)**, then
+
+```bash
+chmod +x Maomao.AppImage
+./Maomao.AppImage
+```
+
+(On Ubuntu 22.04 the AppImage needs `sudo apt install libfuse2` first.)
+
+Notes for Linux:
+- She needs a desktop with a compositor for the see-through window (GNOME, KDE, Cinnamon and
+  most others have one). Without it she sits on a dark square.
+- On Wayland she opens through XWayland automatically, because Wayland doesn't let a window
+  move itself, and she has to walk and fall.
+- The tray icon is in the top bar. On stock GNOME it needs the "AppIndicator and KStatusNotifierItem
+  Support" extension; without it, right-click her for the same menu.
+- **Start with my computer** adds her to `~/.config/autostart`.
+- If the graphics card can't do 3D, she shows as a flat picture instead of not showing at all.
+
 ## Using her
 
 - **Click her** (or her speech bubble) to open the chat. Ask her anything.
@@ -37,7 +68,7 @@ the same app without installing.
 - **Working late:** after 4pm she stays awake as long as he's still working. If he's still there
   an hour later, she tells him once not to stay too long. She only gets sleepy once he's
   actually gone.
-- **Double-click her** and she spins and jumps.
+- **Double-click her** and she spins and does a little jump.
 - **Stroke her head** with the mouse (move it back and forth over her hair): she closes her eyes,
   blushes and little hearts float up. Sometimes she says something about it.
 - **Scroll on her** to make her bigger or smaller. She remembers the size. Settings also has
@@ -46,14 +77,18 @@ the same app without installing.
   bottom of the screen and bounces. Throw her sideways and she can fly onto your other screen.
   When she's pinned she stays exactly where you drop her.
 - **She watches you:** her head and eyes follow the mouse while it's near her.
-- Now and then she walks around, sniffs her herbs, stretches or yawns, and she falls asleep
-  after work.
+- Now and then she walks a few steps, does a little hop where she stands, sniffs her herbs,
+  stretches or yawns. She never jumps off to somewhere else on the screen by herself.
+- **Asleep** after work: eyes shut, head down, little Zs, and she stays perfectly still. No
+  walking, hopping or following the mouse until she wakes up. A reminder still wakes her to
+  say it.
 - **Right-click her** (or the tray icon by the clock): Chat, Show/hide, Mute chime,
   I'm on a call / Call's over (she stays quiet, then sometimes asks how it went), Quiet for
-  1 hour, Pin her here (no walking or hopping, and she stays put after restarts), Settings,
-  Start with Windows, Quit.
-- **Feelings:** happy after you talk to her, a bit lonely if you ignore her for hours, sleepy
-  after work. Her face shows it and the chat says how she's feeling.
+  1 hour, Pin her here (no walking, and she stays put after restarts), Settings,
+  Start with my computer, Quit. The top of the menu shows how she's feeling.
+- **Feelings:** happy after you talk to her (smiling and blushing), a bit lonely if you ignore
+  her for hours (she pouts and stops wandering off), sleepy after work. Her face shows it, and
+  the chat and the menu say how she's feeling.
 
 ## Settings
 
@@ -79,4 +114,8 @@ change expression; `electron/pet.js` handles the mouse (petting, clicks, carryin
 resizing) and talks to `electron/main.js`, which moves the window, does the falling and
 bouncing, and tells her where the mouse is so she can look at it. Custom pictures in
 `me/character/` (idle.png, talk.png, ...) still replace the 3D model if you add them. Pushing to GitHub builds the Windows
-installer (`.github/workflows/windows.yml`) and updates the release page.
+installer and the Linux AppImage and .deb (`.github/workflows/build.yml`) and updates the release page.
+`npm run dist:linux` builds the Linux ones locally.
+
+Claude's reply text is cleaned before it's shown: emojis are removed, and so are wrapper tags like
+`<answer>` and any `<thinking>` block that sometimes come back with the reply.

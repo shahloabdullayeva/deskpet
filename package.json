@@ -7,7 +7,8 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win",
+    "dist:linux": "electron-builder --linux AppImage deb"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
@@ -47,6 +48,25 @@
     "portable": {
       "artifactName": "Maomao-Portable.exe"
     },
-    "publish": null
-  }
+    "publish": null,
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "electron/icon.png",
+      "category": "Utility",
+      "executableName": "maomao",
+      "synopsis": "A little 3D desk pet",
+      "maintainer": "Shahlo Abdullayeva <266842396+shahloabdullayeva@users.noreply.github.com>"
+    },
+    "appImage": {
+      "artifactName": "Maomao.AppImage"
+    },
+    "deb": {
+      "artifactName": "maomao.deb"
+    }
+  },
+  "homepage": "https://github.com/shahloabdullayeva/deskpet",
+  "desktopName": "maomao.desktop"
 }

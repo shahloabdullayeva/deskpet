@@ -2,6 +2,16 @@ const fs = require("fs");
 const path = require("path");
 const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, powerMonitor, screen } = require("electron");
 
+const LINUX = process.platform === "linux";
+if (LINUX) {
+  app.commandLine.appendSwitch("enable-transparent-visuals");
+  app.commandLine.appendSwitch("ignore-gpu-blocklist");
+  if (process.env.WAYLAND_DISPLAY && !app.commandLine.hasSwitch("ozone-platform")) {
+    app.relaunch({ execPath: process.env.APPIMAGE || process.execPath, args: [...process.argv.slice(1), "--ozone-platform=x11"] });
+    app.exit(0);
+  }
+}
+
 const HOME = path.join(app.getPath("userData"), "me");
 process.env.DESKPET_HOME ||= HOME;
 process.env.DESKPET_DATA ||= path.join(app.getPath("userData"), "data");
@@ -43,6 +53,27 @@ const height = () => Math.round(size + 120);
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
+const AUTOSTART = path.join(app.getPath("home"), ".config", "autostart", "maomao.desktop");
+
+function startsWithComputer() {
+  if (!LINUX) return app.getLoginItemSettings().openAtLogin;
+  return fs.existsSync(AUTOSTART);
+}
+
+function setStartup(on) {
+  if (!LINUX) return app.setLoginItemSettings({ openAtLogin: on });
+  if (!on) return fs.rmSync(AUTOSTART, { force: true });
+  const exec = process.env.APPIMAGE || process.execPath;
+  const args = app.isPackaged ? "" : ` "${app.getAppPath()}"`;
+  fs.mkdirSync(path.dirname(AUTOSTART), { recursive: true });
+  fs.writeFileSync(AUTOSTART, `[Desktop Entry]\nType=Application\nName=Maomao\nExec="${exec}"${args}\nIcon=maomao\nX-GNOME-Autostart-enabled=true\nTerminal=false\n`);
+}
+
+function restart() {
+  app.relaunch(process.env.APPIMAGE ? { execPath: process.env.APPIMAGE, args: process.argv.slice(1) } : undefined);
+  app.exit(0);
+}
+
 let settingsWin;
 
 function openSettings() {
@@ -67,9 +98,8 @@ ipcMain.handle("settings:save", (_event, form) => {
   try {
     fs.writeFileSync(PLACE, JSON.stringify(place));
   } catch {}
-  if (app.isPackaged && pet?.isExample) app.setLoginItemSettings({ openAtLogin: true });
-  app.relaunch();
-  app.exit(0);
+  if (app.isPackaged && pet?.isExample) setStartup(true);
+  restart();
 });
 ipcMain.on("settings:close", () => settingsWin?.close());
 
@@ -205,6 +235,7 @@ function send(channel, payload) {
 
 function walk(dx) {
   clearInterval(walkTimer);
+  if (place.pinned) return send("walked");
   const WIDTH = width();
   const [x, y] = win.getPosition();
   const area = screen.getDisplayNearestPoint({ x, y }).workArea;
@@ -222,19 +253,10 @@ function walk(dx) {
   }, 16);
 }
 
-function hop() {
+function stopWalking() {
   clearInterval(walkTimer);
-  const [WIDTH, HEIGHT] = [width(), height()];
-  const [x, y] = win.getPosition();
-  const here = screen.getDisplayNearestPoint({ x, y });
-  const others = screen.getAllDisplays().filter((display) => display.id !== here.id);
-  const target = others.length ? others[Math.floor(Math.random() * others.length)] : here;
-  const area = target.workArea;
-  const left = area.x + Math.round(Math.random() * Math.max(0, area.width - WIDTH));
-  win.setPosition(left, area.y + area.height - HEIGHT);
-  if (chatWin && !chatWin.isDestroyed() && chatWin.isVisible()) placeChat();
   savePlace();
-  send("hopped");
+  send("walked");
 }
 
 function placeChat() {
@@ -286,14 +308,21 @@ function lists() {
 
 function pin(pinned) {
   place = { ...place, pinned };
+  if (pinned) stopWalking();
   savePlace();
   send("pinned", pinned);
+  refreshTray();
+}
+
+function refreshTray() {
+  if (tray && !tray.isDestroyed()) tray.setContextMenu(menu());
 }
 
 function startCall() {
   callStarted = Date.now();
   hiddenUntil = Infinity;
   send("call", true);
+  refreshTray();
 }
 
 function endCall() {
@@ -301,6 +330,7 @@ function endCall() {
   callStarted = 0;
   hiddenUntil = 0;
   send("call", false);
+  refreshTray();
   if (minutes >= 3 && Math.random() < 0.6) setTimeout(() => pet.afterCall(minutes).catch(() => {}), 20_000);
 }
 
@@ -308,16 +338,17 @@ function menu() {
   const quietFor = (minutes) => () => (hiddenUntil = Date.now() + minutes * 60_000);
   return Menu.buildFromTemplate([
     { label: pet.config.petName, enabled: false },
+    { label: `Feeling ${pet.feeling || pet.feel().feeling}`, enabled: false },
     { type: "separator" },
     { label: `Chat with ${pet.config.petName}`, click: openChat },
     { label: "Show / hide", click: () => (win.isVisible() ? win.hide() : win.show()) },
-    { label: "Mute chime", type: "checkbox", checked: muted, click: () => (muted = !muted) },
+    { label: "Mute chime", type: "checkbox", checked: muted, click: (item) => ((muted = item.checked), refreshTray()) },
     callStarted
       ? { label: "Call's over", click: endCall }
       : { label: "I'm on a call", click: startCall },
     { label: "Quiet for 1 hour (in a meeting)", click: quietFor(60) },
     { label: "Pin her here", type: "checkbox", checked: Boolean(place.pinned), click: (item) => pin(item.checked) },
-    { label: "Start with my computer", type: "checkbox", checked: app.getLoginItemSettings().openAtLogin, click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }) },
+    { label: "Start with my computer", type: "checkbox", checked: startsWithComputer(), click: (item) => (setStartup(item.checked), refreshTray()) },
     { type: "separator" },
     { label: "Settings…", click: openSettings },
     { type: "separator" },
@@ -333,7 +364,7 @@ app.whenReady().then(() => {
   pet.idleSeconds = () => powerMonitor.getSystemIdleTime();
   createWindow();
 
-  tray = new Tray(nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 }));
+  tray = new Tray(nativeImage.createFromPath(ICON).resize({ width: LINUX ? 24 : 16, height: LINUX ? 24 : 16 }));
   tray.setToolTip(pet.config.petName);
   tray.setContextMenu(menu());
   tray.on("click", () => win.show());
@@ -343,6 +374,7 @@ app.whenReady().then(() => {
     send("say", { text, mood, chime: chime && !muted && pet.config.pet?.sound !== false });
   });
   pet.events.on("mood", (mood) => send("mood", mood));
+  pet.events.on("feeling", refreshTray);
   pet.events.on("feeling", (feeling) => {
     if (chatWin && !chatWin.isDestroyed()) chatWin.webContents.send("chat:feeling", feeling);
   });
@@ -394,7 +426,7 @@ app.whenReady().then(() => {
   ipcMain.on("open-chat", openChat);
   ipcMain.on("hover", (_event, over) => win.setIgnoreMouseEvents(!over, { forward: true }));
   ipcMain.on("walk", (_event, dx) => walk(dx));
-  ipcMain.on("hop", hop);
+  ipcMain.on("stop-walking", stopWalking);
   ipcMain.on("drag", (_event, { dx, dy }) => {
     clearInterval(walkTimer);
     clearInterval(fallTimer);
@@ -404,7 +436,7 @@ app.whenReady().then(() => {
     savePlace();
   });
   ipcMain.on("menu", () => {
-    tray.setContextMenu(menu());
+    refreshTray();
     menu().popup({ window: win });
   });
 
