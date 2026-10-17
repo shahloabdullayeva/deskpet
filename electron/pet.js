@@ -17,7 +17,7 @@ function start3d() {
   } catch (error) {
     console.warn(`3D failed, showing her picture instead: ${error.message}`);
     const still = () => {};
-    const flat = { cursor: () => false, partAt: () => null };
+    const flat = { cursor: () => false, partAt: () => null, bounds: () => null };
     for (const name of ["setLook", "setFace", "setMouth", "act", "setWalking", "setHeld", "drag", "setAirborne", "land", "poke", "spin", "jump", "hop", "wonder", "setAsleep", "setPaused"]) flat[name] = still;
     flat.flat = true;
     return flat;
@@ -143,17 +143,45 @@ function inside(el, x, y) {
 }
 
 function track(x, y) {
+  if (down || !art.hidden) return;
   const r = sceneEl.getBoundingClientRect();
-  let over = false;
-  if (!art.hidden) over = inside(art, x, y);
-  else over = Boolean(model.cursor(x - r.left, y - r.top));
-  over ||= inside(bubble, x, y) || inside(badge, x, y);
-  if (over !== hovered && !down) {
-    hovered = over;
-    rootEl.classList.toggle("over", over);
-    window.pet.hover(over);
-  }
+  model.cursor(x - r.left, y - r.top);
 }
+
+function hitAt(x, y) {
+  if (inside(bubble, x, y) || inside(badge, x, y)) return true;
+  if (!art.hidden) return inside(art, x, y);
+  const r = sceneEl.getBoundingClientRect();
+  return Boolean(model.partAt(x - r.left, y - r.top));
+}
+
+function setHovered(over) {
+  hovered = over;
+  rootEl.classList.toggle("over", over);
+}
+
+function box(el, pad = 0) {
+  const r = el.getBoundingClientRect();
+  return { x: Math.round(r.left - pad), y: Math.round(r.top - pad), width: Math.round(r.width + pad * 2), height: Math.round(r.height + pad * 2) };
+}
+
+let lastShape = "";
+function reportShape() {
+  const rects = [];
+  if (!art.hidden) rects.push(box(art));
+  else {
+    const sprite = model.bounds();
+    const r = sceneEl.getBoundingClientRect();
+    if (sprite) rects.push({ x: Math.round(r.left + sprite.x - 4), y: Math.round(r.top + sprite.y - 4), width: Math.round(sprite.width + 8), height: Math.round(sprite.height + 8) });
+  }
+  if (!bubble.hidden) rects.push(box(bubble, 2));
+  if (!badge.hidden) rects.push(box(badge, 2));
+  const key = JSON.stringify(rects);
+  if (key === lastShape) return;
+  lastShape = key;
+  window.pet.shape(rects);
+}
+setInterval(reportShape, 100);
 
 let down = null;
 let samples = [];
@@ -181,13 +209,16 @@ window.addEventListener("mousemove", (event) => {
 });
 
 petEl.addEventListener("mousedown", (event) => {
-  if (event.button !== 0 || !hovered) return;
+  if (event.button !== 0 || !(hovered || hitAt(event.clientX, event.clientY))) return;
+  setHovered(true);
+  window.pet.hold(true);
   down = { x: event.screenX, y: event.screenY, moved: false };
   samples = [{ x: event.screenX, y: event.screenY, t: performance.now() }];
 });
 
 window.addEventListener("mouseup", (event) => {
   if (!down) return;
+  window.pet.hold(false);
   if (down.moved) {
     held = false;
     rootEl.classList.remove("grabbing", "flying");
@@ -219,14 +250,20 @@ bubble.addEventListener("click", () => {
 });
 petEl.addEventListener("contextmenu", (event) => {
   event.preventDefault();
-  if (hovered) window.pet.menu();
+  if (hovered || hitAt(event.clientX, event.clientY)) window.pet.menu();
 });
 window.addEventListener("wheel", (event) => {
-  if (hovered) window.pet.resize(event.deltaY < 0 ? 1 : -1);
+  if (hovered || hitAt(event.clientX, event.clientY)) window.pet.resize(event.deltaY < 0 ? 1 : -1);
 });
 
 window.pet.on("cursor", ({ x, y }) => {
   if (!down) track(x, y);
+});
+window.pet.on("hover", (over) => {
+  if (!down) setHovered(over);
+});
+document.documentElement.addEventListener("mouseleave", () => {
+  if (!down) setHovered(false);
 });
 window.pet.on("say", say);
 window.pet.on("flash", (mood) => {

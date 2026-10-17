@@ -60,6 +60,9 @@ Notes for Linux:
   Support" extension; without it, right-click her for the same menu.
 - **Start with my computer** adds her to `~/.config/autostart`.
 - If the graphics card can't do 3D, she shows as a flat picture instead of not showing at all.
+- Clicks only land on her (and her speech bubble); everywhere else in her little window goes straight
+  through to whatever is underneath. On Linux this is done with the window's input shape, because
+  Linux doesn't tell apps where the mouse is while it's over other windows.
 
 ## Updates
 

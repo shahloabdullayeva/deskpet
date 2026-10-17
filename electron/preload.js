@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-const CHANNELS = ["say", "mood", "look", "walked", "flash", "visible", "pinned", "call", "cursor", "size", "airborne", "bounce", "landed"];
+const CHANNELS = ["say", "mood", "look", "walked", "flash", "visible", "hover", "pinned", "call", "cursor", "size", "airborne", "bounce", "landed"];
 
 contextBridge.exposeInMainWorld("pet", {
   ready: () => ipcRenderer.send("ready"),
@@ -8,7 +8,8 @@ contextBridge.exposeInMainWorld("pet", {
   spun: () => ipcRenderer.send("spun"),
   petted: () => ipcRenderer.send("petted"),
   openChat: () => ipcRenderer.send("open-chat"),
-  hover: (over) => ipcRenderer.send("hover", over),
+  shape: (rects) => ipcRenderer.send("shape", rects),
+  hold: (on) => ipcRenderer.send("hold", on),
   drag: (dx, dy) => ipcRenderer.send("drag", { dx, dy }),
   drop: (vx, vy) => ipcRenderer.send("drop", { vx, vy }),
   resize: (step) => ipcRenderer.send("resize", step),

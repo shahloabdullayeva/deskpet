@@ -576,6 +576,21 @@ export function createPet(canvas, { onPetted } = {}) {
     return "body";
   }
 
+  const box = new THREE.Box3();
+  const corner = new THREE.Vector3();
+  function bounds() {
+    box.setFromObject(rig);
+    if (box.isEmpty()) return null;
+    let [left, top, right, bottom] = [Infinity, Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < 8; i++) {
+      corner.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).project(camera);
+      const px = ((corner.x + 1) / 2) * width;
+      const py = ((1 - corner.y) / 2) * height;
+      [left, top, right, bottom] = [Math.min(left, px), Math.min(top, py), Math.max(right, px), Math.max(bottom, py)];
+    }
+    return { x: left, y: top, width: right - left, height: bottom - top };
+  }
+
   const headWorld = new THREE.Vector3();
   const projected = new THREE.Vector3();
 
@@ -874,5 +889,6 @@ export function createPet(canvas, { onPetted } = {}) {
     },
     cursor,
     partAt,
+    bounds,
   };
 }

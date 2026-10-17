@@ -3,6 +3,7 @@ const path = require("path");
 const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, powerMonitor, screen } = require("electron");
 
 const LINUX = process.platform === "linux";
+const SHAPED = LINUX;
 app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 app.commandLine.appendSwitch("disable-renderer-backgrounding");
 app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
@@ -180,23 +181,60 @@ function createWindow() {
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     win.setAlwaysOnTop(true, "screen-saver");
     win.on("blur", () => setTimeout(keepOnTop, 60));
-    setInterval(keepOnTop, 2000);
   } else {
     win.setAlwaysOnTop(true, "floating");
     win.setVisibleOnAllWorkspaces(true);
   }
-  win.setIgnoreMouseEvents(true, { forward: true });
+  over = false;
+  if (SHAPED) applyShape();
+  else win.setIgnoreMouseEvents(true, { forward: true });
   win.loadFile(path.join(__dirname, "index.html"));
-  let lastCursor = "";
-  setInterval(() => {
-    if (!alive(win) || !win.isVisible()) return;
-    const point = screen.getCursorScreenPoint();
-    const [x, y] = win.getPosition();
-    const key = `${point.x - x},${point.y - y}`;
-    if (key === lastCursor) return;
+}
+
+let hitRects = [];
+let holding = false;
+let over = false;
+let lastCursor = "";
+
+function cursorOverPet(x, y) {
+  return hitRects.some((r) => x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height);
+}
+
+function pollCursor() {
+  if (!alive(win) || !win.isVisible()) return;
+  const point = screen.getCursorScreenPoint();
+  const [wx, wy] = win.getPosition();
+  const [x, y] = [point.x - wx, point.y - wy];
+  const key = `${x},${y}`;
+  if (key !== lastCursor) {
     lastCursor = key;
-    send("cursor", { x: point.x - x, y: point.y - y });
-  }, 40);
+    send("cursor", { x, y });
+  }
+  const now = holding || cursorOverPet(x, y);
+  if (now === over) return;
+  over = now;
+  if (!SHAPED) win.setIgnoreMouseEvents(!over, { forward: true });
+  send("hover", over);
+}
+
+function applyShape() {
+  if (!alive(win) || typeof win.setShape !== "function") return;
+  const [W, H] = win.getSize();
+  const rects = hitRects
+    .map((r) => {
+      const x = Math.max(0, Math.round(r.x - 14));
+      const y = Math.max(0, Math.round(r.y - 14));
+      return { x, y, width: Math.min(W - x, Math.round(r.width + 28)), height: Math.min(H - y, Math.round(r.height + 28)) };
+    })
+    .filter((r) => r.width > 0 && r.height > 0);
+  win.setShape(rects.length ? rects : [{ x: 0, y: 0, width: 1, height: 1 }]);
+}
+
+function setHitRects(rects) {
+  hitRects = (Array.isArray(rects) ? rects : [])
+    .slice(0, 8)
+    .map((r) => ({ x: Number(r.x) || 0, y: Number(r.y) || 0, width: Math.max(0, Number(r.width) || 0), height: Math.max(0, Number(r.height) || 0) }));
+  if (SHAPED) applyShape();
 }
 
 function keepOnTop() {
@@ -225,6 +263,7 @@ function resize(step) {
 function fall(vx, vy) {
   clearInterval(walkTimer);
   clearInterval(fallTimer);
+  if (!alive(win)) return;
   const cap = (v) => Math.max(-70, Math.min(70, v));
   let [x, y] = win.getPosition();
   vx = cap(vx * 16);
@@ -509,7 +548,13 @@ app.whenReady().then(() => {
     fall(Number(vx) || 0, Number(vy) || 0);
   });
   ipcMain.on("open-chat", openChat);
-  ipcMain.on("hover", (_event, over) => alive(win) && win.setIgnoreMouseEvents(!over, { forward: true }));
+  ipcMain.on("shape", (_event, rects) => setHitRects(rects));
+  ipcMain.on("hold", (_event, on) => {
+    holding = Boolean(on);
+    pollCursor();
+  });
+  setInterval(pollCursor, 30);
+  if (LINUX) setInterval(keepOnTop, 2000);
   ipcMain.on("walk", (_event, dx) => walk(dx));
   ipcMain.on("stop-walking", stopWalking);
   ipcMain.on("drag", (_event, { dx, dy }) => {
