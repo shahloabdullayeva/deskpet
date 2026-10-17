@@ -1,21 +1,9 @@
 const test = require("node:test");
 const assert = require("node:assert");
-const { saidChecking } = require("../src/checking");
 const { localParts, isWorkTime, isDue } = require("../src/clock");
 const { Brain } = require("../src/brain");
 
-const words = ["checking", "let me check", "one sec", "brb", "i'll check"];
 const work = { start: "09:00", end: "18:00", days: [1, 2, 3, 4, 5] };
-
-test("spots short 'checking' messages", () => {
-  assert.ok(saidChecking("checking", words));
-  assert.ok(saidChecking("Checking!!", words));
-  assert.ok(saidChecking("ok let me check!", words));
-  assert.ok(saidChecking("I’ll check", words));
-  assert.ok(!saidChecking("rechecking", words));
-  assert.ok(!saidChecking("hi babe", words));
-  assert.ok(!saidChecking("I was checking the truck schedule all morning and then went to lunch with the team", words));
-});
 
 test("reads local time in a time zone", () => {
   const parts = localParts(new Date("2026-10-16T05:30:00Z"), "Asia/Tashkent");
@@ -31,11 +19,13 @@ test("work hours and check-in window", () => {
   assert.ok(isDue(friday("13:05"), work, "13:00"));
   assert.ok(!isDue(friday("13:10"), work, "13:00"));
   assert.ok(!isDue(friday("12:59"), work, "13:00"));
+  assert.ok(isDue(friday("14:20"), work, "13:00", 90));
+  assert.ok(!isDue(friday("14:30"), work, "13:00", 90));
 });
 
 test("uses your phrases without Claude and does not repeat back to back", async () => {
   const brain = new Brain({
-    config: { me: "Me", him: "babe", petName: "Mochi", brain: { useClaudeFor: ["checking"] } },
+    config: { me: "Me", him: "babe", petName: "Mochi", brain: { useClaudeFor: ["reply"] } },
     phrases: { lunch: [{ text: "a" }, { text: "b" }] },
     style: "",
     env: {},
@@ -46,5 +36,5 @@ test("uses your phrases without Claude and does not repeat back to back", async 
     assert.notStrictEqual(line.text, previous);
     previous = line.text;
   }
-  assert.strictEqual((await brain.write("checking", { text: "checking", minutes: 20 })).text, "hi");
+  assert.strictEqual((await brain.write("workingLate", { minutes: 70 })).text.length > 0, true);
 });

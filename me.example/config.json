@@ -1,11 +1,11 @@
 {
   "me": "",
-  "him": "",
+  "him": "John",
   "petName": "Maomao",
-  "timezone": "",
+  "timezone": "America/New_York",
   "workHours": {
-    "start": "09:00",
-    "end": "18:00",
+    "start": "07:00",
+    "end": "16:00",
     "days": [
       1,
       2,
@@ -16,55 +16,33 @@
   },
   "checkins": [
     {
-      "time": "09:15",
+      "time": "07:15",
       "kind": "morning"
     },
     {
-      "time": "11:30",
+      "time": "10:00",
       "kind": "howsYourDay"
     },
     {
-      "time": "13:00",
+      "time": "12:00",
       "kind": "lunch"
     },
     {
-      "time": "15:30",
+      "time": "14:00",
       "kind": "water"
     },
     {
-      "time": "18:00",
+      "time": "16:00",
       "kind": "goodbye"
     }
   ],
-  "checking": {
-    "words": [
-      "checking",
-      "let me check",
-      "will check",
-      "i'll check",
-      "one sec",
-      "1 sec",
-      "sec",
-      "brb",
-      "wait",
-      "hold on",
-      "one moment"
-    ],
-    "nudgeAfterMinutes": 20,
-    "maxNudgesPerDay": 4
-  },
-  "telegram": {
-    "forwardHisMessagesToMe": true
-  },
   "brain": {
     "model": "claude-opus-5-5",
     "useClaudeFor": [
-      "checking",
       "reply"
     ]
   },
   "pet": {
-    "runBot": true,
     "volume": 0.7,
     "chatterMinutes": 45,
     "character": "maomao",

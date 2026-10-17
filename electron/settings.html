@@ -14,18 +14,9 @@
   </header>
   <main>
     <section>
-      <h2>Where she lives</h2>
-      <select id="mode">
-        <option value="desktop">On this computer's screen</option>
-        <option value="phone">On his phone (Telegram), running from this computer</option>
-      </select>
-      <p class="hint" id="mode-hint"></p>
-    </section>
-
-    <section>
-      <h2 id="about">About you</h2>
-      <label for="name" id="name-label">Your name</label>
-      <input id="name" type="text" placeholder="What should she call you?">
+      <h2>About him</h2>
+      <label for="name">His name</label>
+      <input id="name" type="text" placeholder="What should she call him?">
       <div class="two">
         <div><label for="petName">Her name</label><input id="petName" type="text"></div>
         <div>
@@ -50,7 +41,7 @@
       <h2>Chat</h2>
       <label for="anthropicKey">Claude API key</label>
       <input id="anthropicKey" type="password" placeholder="sk-ant-…" autocomplete="off">
-      <p class="hint">Lets you chat with her, and lets her remember things and set reminders. Get one at console.anthropic.com. It stays on this computer.</p>
+      <p class="hint">Lets him chat with her, and lets her remember things and set reminders. Get one at console.anthropic.com. It stays on this computer.</p>
       <label for="talksLike">She texts like (optional)</label>
       <input id="talksLike" type="text" placeholder="Someone's name, e.g. your girlfriend">
       <label for="style">How she should talk (optional)</label>
@@ -84,12 +75,6 @@
       </select>
     </section>
 
-    <section>
-      <h2>Telegram (optional)</h2>
-      <p class="hint">Also get her check-ins and reminders on your phone, and chat with her there. Make a bot with @BotFather on Telegram, paste its token, then send the bot <code id="pair-hint"></code>.</p>
-      <label for="telegramToken">Bot token</label>
-      <input id="telegramToken" type="password" autocomplete="off" placeholder="123456789:AA…">
-    </section>
   </main>
   <footer>
     <span id="saved"></span>

@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, screen } = require("electron");
+const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, powerMonitor, screen } = require("electron");
 
 const HOME = path.join(app.getPath("userData"), "me");
 process.env.DESKPET_HOME ||= HOME;
@@ -304,22 +304,7 @@ function endCall() {
   if (minutes >= 3 && Math.random() < 0.6) setTimeout(() => pet.afterCall(minutes).catch(() => {}), 20_000);
 }
 
-function phoneMenu() {
-  const paired = Boolean(pet.state.him);
-  return Menu.buildFromTemplate([
-    { label: `${pet.config.petName}: running for Telegram`, enabled: false },
-    { label: paired ? `Paired with ${pet.state.him.name || pet.config.him}` : "Waiting for him to pair", enabled: false },
-    { type: "separator" },
-    { label: "See the chat", click: openChat },
-    { label: "Start with my computer", type: "checkbox", checked: app.getLoginItemSettings().openAtLogin, click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }) },
-    { label: "Settings…", click: openSettings },
-    { type: "separator" },
-    { label: "Quit", click: () => app.quit() },
-  ]);
-}
-
 function menu() {
-  if (pet.phone) return phoneMenu();
   const quietFor = (minutes) => () => (hiddenUntil = Date.now() + minutes * 60_000);
   return Menu.buildFromTemplate([
     { label: pet.config.petName, enabled: false },
@@ -345,13 +330,13 @@ app.on("second-instance", () => win?.show());
 app.whenReady().then(() => {
   app.dock?.hide();
   pet = new Deskpet();
-  if (!pet.phone) createWindow();
-  else if (!pet.telegram) setTimeout(openSettings, 800);
+  pet.idleSeconds = () => powerMonitor.getSystemIdleTime();
+  createWindow();
 
   tray = new Tray(nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 }));
   tray.setToolTip(pet.config.petName);
   tray.setContextMenu(menu());
-  tray.on("click", () => (win ? win.show() : (tray.setContextMenu(menu()), tray.popUpContextMenu())));
+  tray.on("click", () => win.show());
 
   pet.events.on("say", ({ text, chime, mood }) => {
     if (Date.now() < hiddenUntil) return;
@@ -371,7 +356,6 @@ app.whenReady().then(() => {
     petName: pet.config.petName,
     online: Boolean(pet.brain.client),
     feeling: pet.feeling || pet.feel().feeling,
-    forwarded: Boolean(pet.telegram && pet.config.telegram?.forwardHisMessagesToMe && pet.state.me),
     history: pet.desk.slice(-100),
   }));
   ipcMain.handle("chat:send", async (_event, text) => {
@@ -424,7 +408,7 @@ app.whenReady().then(() => {
     menu().popup({ window: win });
   });
 
-  pet.start({ bot: pet.config.pet?.runBot !== false && !pet.isExample });
+  pet.start();
 });
 
 app.on("before-quit", () => pet?.stop());

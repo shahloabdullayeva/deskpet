@@ -11,11 +11,12 @@ const TASKS = {
     `Send one short casual message out of nowhere, like a friend texting during the day: ask how something you remember is going, comment on the time of day, or say something small and sweet. One or two short sentences.\n\n${context.memory || ""}`,
   afterCall: (context) =>
     `They just finished a work call of about ${context.minutes} minutes. Casually ask how it went, for example whether things got settled. One short sentence.`,
-  checking: (context) =>
-    `They wrote "${context.text}" about ${context.minutes} minutes ago and then went quiet. Playfully remind them they said they would check and still have not replied.`,
+  workingLate: (context) =>
+    `Their work day ended about ${context.minutes} minutes ago but they are still at the computer. Gently tease them for staying late and tell them not to stay too long. One short sentence.`,
 };
 
 const FALLBACK = {
+  workingLate: [{ text: "still here? don't stay too late" }, { text: "working late again? go home soon ok" }],
   afterCall: [{ text: "how did the call go? did it get settled?" }, { text: "call's done. everything okay?" }, { text: "that was a long one. how did it go?" }],
 };
 
@@ -40,7 +41,7 @@ class Brain {
   }
 
   async write(kind, context = {}) {
-    if (!this.client || !(this.claudeFor.includes(kind) || ["chatter", "afterCall"].includes(kind))) return this.pick(kind);
+    if (!this.client || !(this.claudeFor.includes(kind) || ["chatter", "afterCall", "workingLate"].includes(kind))) return this.pick(kind);
     try {
       const messages =
         kind === "reply"

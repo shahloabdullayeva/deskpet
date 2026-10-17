@@ -3,16 +3,16 @@ const path = require("path");
 const { EventEmitter } = require("events");
 
 const { load } = require("./config");
-const { localParts, isWorkTime, isDue } = require("./clock");
-const { saidChecking } = require("./checking");
-const { Telegram } = require("./telegram");
+const { localParts, isWorkTime, isDue, toMinutes } = require("./clock");
 const { Brain, stripEmoji } = require("./brain");
 const { Memory } = require("./memory");
 
 const FACES = { sleepy: "sleepy", lonely: "pout", happy: "idle", calm: "idle" };
 const LONELY_AFTER_MINUTES = 150;
 
-const MOODS = { tap: "happy", reply: "happy", goodbye: "happy", morning: "happy", checking: "pout" };
+const MOODS = { tap: "happy", reply: "happy", goodbye: "happy", morning: "happy", workingLate: "pout" };
+const AWAY_AFTER_SECONDS = 5 * 60;
+const WORKING_LATE_AFTER_MINUTES = 60;
 
 class Deskpet {
   constructor() {
@@ -26,9 +26,8 @@ class Deskpet {
     this.desk = this.readChat();
     this.memory = new Memory(loaded.dataDir, loaded.config.timezone);
     this.brain = new Brain(loaded);
-    this.telegram = loaded.env.telegramToken ? new Telegram(loaded.env.telegramToken) : null;
     this.events = new EventEmitter();
-    this.waiting = new Map();
+    this.idleSeconds = () => 0;
     this.state = this.readState();
     this.mood = null;
     this.lastChatter = Date.now();
@@ -36,7 +35,17 @@ class Deskpet {
     this.startedAt = Date.now();
   }
 
+  atComputer() {
+    return this.idleSeconds() < AWAY_AFTER_SECONDS;
+  }
+
+  workingLate(parts = this.now()) {
+    const work = this.config.workHours;
+    return work.days.includes(parts.weekday) && parts.minutes >= toMinutes(work.end) && this.atComputer();
+  }
+
   feel(parts = this.now()) {
+    if (this.workingLate(parts)) return { feeling: "calm", why: "they're still working after their usual hours" };
     if (!isWorkTime(parts, this.config.workHours)) return { feeling: "sleepy", why: "it's outside work hours" };
     const minutes = Math.round((Date.now() - Math.max(this.state.lastTalk || 0, this.startedAt)) / 60_000);
     if (this.state.lastTalk && Date.now() - this.state.lastTalk < 20 * 60_000) return { feeling: "happy", why: "you just talked" };
@@ -68,7 +77,7 @@ class Deskpet {
     try {
       return JSON.parse(fs.readFileSync(this.statePath, "utf8"));
     } catch {
-      return { offset: 0, me: null, him: null, day: null, fired: [], nudges: 0 };
+      return { day: null, fired: [] };
     }
   }
 
@@ -92,9 +101,6 @@ class Deskpet {
   async deskChat(text) {
     this.addToChat("him", text);
     this.touch();
-    if (this.telegram && this.config.telegram?.forwardHisMessagesToMe && this.state.me?.chatId) {
-      this.telegram.sendText(this.state.me.chatId, `${this.config.him} told ${this.config.petName}: ${text}`).catch(() => {});
-    }
     const reply = await this.brain.chat(this.desk.slice(-40), this.tools());
     this.addToChat("pet", reply.text);
     return reply;
@@ -138,62 +144,26 @@ class Deskpet {
     fs.writeFileSync(this.statePath, JSON.stringify(this.state, null, 2));
   }
 
-  get petRunning() {
-    return this.events.listenerCount("say") > 0 && !this.phone;
-  }
-
-  get phone() {
-    return this.config.pet?.mode === "phone";
-  }
-
-  start({ bot = true } = {}) {
+  start() {
     this.running = true;
     this.tick();
     this.timer = setInterval(() => this.tick().catch((error) => console.error("[tick]", error)), 20_000);
-    if (bot && this.telegram) this.poll();
-    else if (bot) console.log("[deskpet] no TELEGRAM_BOT_TOKEN in .env, running without Telegram");
   }
 
   stop() {
     this.running = false;
     clearInterval(this.timer);
-    this.abort?.abort();
-  }
-
-  async poll() {
-    let backoff = 1000;
-    while (this.running) {
-      try {
-        this.abort = new AbortController();
-        const updates = await this.telegram.getUpdates(this.state.offset, this.abort.signal);
-        for (const update of updates) {
-          this.state.offset = update.update_id + 1;
-          if (update.message) await this.handle(update.message).catch((error) => console.error("[message]", error));
-        }
-        if (updates.length) this.saveState();
-        backoff = 1000;
-      } catch (error) {
-        if (!this.running) return;
-        console.error(`[telegram] ${error.message}`);
-        await new Promise((resolve) => setTimeout(resolve, backoff));
-        backoff = Math.min(backoff * 2, 60_000);
-      }
-    }
   }
 
   now() {
     return localParts(new Date(), this.config.timezone);
   }
 
-  async say(kind, context = {}, { chatId, replyTo, pet = true, chime = true } = {}) {
-    if (this.phone && !chatId && kind !== "tap") chatId = this.state.him?.chatId;
+  async say(kind, context = {}, { chime = true } = {}) {
     const line = await this.brain.write(kind, context);
     const text = stripEmoji(line.text);
-    if (pet) {
-      this.events.emit("say", { text, chime, mood: MOODS[kind] || "talk" });
-      if (kind !== "tap") this.addToChat("pet", text);
-    }
-    if (chatId && this.telegram) await this.telegram.sendText(chatId, text, replyTo);
+    this.events.emit("say", { text, chime, mood: MOODS[kind] || "talk" });
+    if (kind !== "tap") this.addToChat("pet", text);
     return { ...line, text };
   }
 
@@ -201,134 +171,43 @@ class Deskpet {
     return this.say("tap", {});
   }
 
+  grace(checkin) {
+    if (checkin.kind === "morning") return Math.max(10, toMinutes(this.config.workHours.end) - toMinutes(checkin.time));
+    return checkin.kind === "goodbye" ? 120 : 90;
+  }
+
   async tick() {
     const parts = this.now();
     const work = this.config.workHours;
-    if (this.state.day !== parts.date) Object.assign(this.state, { day: parts.date, fired: [], nudges: 0 });
+    if (this.state.day !== parts.date) Object.assign(this.state, { day: parts.date, fired: [] });
 
     this.updateFeeling();
-    const mood = this.feeling === "sleepy" ? "sleepy" : "idle";
+    const here = this.atComputer();
 
     for (const checkin of this.config.checkins || []) {
       const key = `${checkin.time} ${checkin.kind}`;
-      if (this.state.fired.includes(key) || !isDue(parts, work, checkin.time)) continue;
+      if (this.state.fired.includes(key) || !here || !isDue(parts, work, checkin.time, this.grace(checkin))) continue;
       this.state.fired.push(key);
       this.saveState();
-      await this.say(checkin.kind, {}, { chatId: this.state.him?.chatId });
+      await this.say(checkin.kind);
+    }
+
+    if (here && this.workingLate(parts) && parts.minutes - toMinutes(work.end) >= WORKING_LATE_AFTER_MINUTES && !this.state.fired.includes("workingLate")) {
+      this.state.fired.push("workingLate");
+      this.saveState();
+      await this.say("workingLate", { minutes: parts.minutes - toMinutes(work.end) });
     }
 
     for (const reminder of this.memory.due()) {
       const text = `Reminder: ${stripEmoji(reminder.text)}`;
       this.events.emit("say", { text, chime: true, mood: "talk" });
       this.addToChat("pet", text);
-      if (this.telegram && this.state.him?.chatId) await this.telegram.sendText(this.state.him.chatId, text).catch(() => {});
-    }
-
-    const rules = this.config.checking;
-    for (const [chatId, wait] of this.waiting) {
-      const minutes = Math.round((Date.now() - wait.at) / 60_000);
-      if (minutes < rules.nudgeAfterMinutes) continue;
-      this.waiting.delete(chatId);
-      if (mood !== "idle" || this.state.nudges >= rules.maxNudgesPerDay) continue;
-      this.state.nudges += 1;
-      this.saveState();
-      await this.say("checking", { text: wait.text, minutes }, { chatId, replyTo: wait.messageId });
     }
 
     const chatter = (this.config.pet?.chatterMinutes || 0) * 60_000;
-    if (chatter && mood === "idle" && (this.petRunning || (this.phone && this.state.him)) && Date.now() - this.lastChatter > chatter) {
+    if (chatter && here && this.feeling !== "sleepy" && Date.now() - this.lastChatter > chatter) {
       this.lastChatter = Date.now();
       await this.say("chatter", { memory: this.tools().context() });
-    }
-  }
-
-  async handle(message) {
-    const text = message.text || message.caption || "";
-    const from = message.from?.id;
-    const chatId = message.chat.id;
-    const isPrivate = message.chat.type === "private";
-    const isMe = from && from === this.state.me?.userId;
-    const isHim = from && from === this.state.him?.userId;
-
-    if (text.startsWith("/")) return this.command(message, text, { isMe, isPrivate });
-
-    if (isHim) {
-      this.waiting.delete(chatId);
-      if (saidChecking(text, this.config.checking.words)) {
-        this.waiting.set(chatId, { at: Date.now(), text, messageId: message.message_id });
-      }
-      if (isPrivate && text) return this.chatWithHim(chatId, text);
-      return;
-    }
-
-    if (isMe && isPrivate) {
-      if (text) {
-        if (!this.petRunning) return this.telegram.sendText(chatId, "The pet isn't open on his computer right now.");
-        this.events.emit("say", { text: stripEmoji(text), chime: true, mood: "happy" });
-        this.addToChat("her", text);
-        return this.telegram.sendText(chatId, `${this.config.petName} showed it on his screen.`);
-      }
-    }
-  }
-
-  async chatWithHim(chatId, text) {
-    const reply = await this.deskChat(text);
-    await this.telegram.sendText(chatId, reply.text);
-  }
-
-  async command(message, text, { isMe, isPrivate }) {
-    const chatId = message.chat.id;
-    const [command, ...args] = text.trim().split(/\s+/);
-    const name = command.split("@")[0].toLowerCase();
-
-    if (name === "/start" || name === "/help") {
-      return this.telegram.sendText(
-        chatId,
-        `Hi, I'm ${this.config.petName}.\n\nTo set me up, each of you sends me once in private:\n/pair <code> me  (her)\n/pair <code> him  (him)\n\nShe can then:\n/test <kind> — send a check-in now (morning, howsYourDay, lunch, water, goodbye, checking)\n/status — see what I'm up to\nor just send me a message and I'll show it on his desk.`
-      );
-    }
-
-    if (name === "/pair") {
-      if (!isPrivate) return this.telegram.sendText(chatId, "Send /pair to me in a private chat.");
-      const [code, who] = args;
-      if (!this.env.pairCode || code !== this.env.pairCode || !["me", "him"].includes(who)) {
-        return this.telegram.sendText(chatId, "Hmm, that code doesn't look right.");
-      }
-      this.state[who] = { userId: message.from.id, chatId, name: message.from.first_name };
-      this.saveState();
-      if (who === "me") return this.telegram.sendText(chatId, "Got you. I'll tell you when he talks to me.");
-      const host = this.config.me ? `${this.config.me}'s` : "your partner's";
-      return this.telegram.sendText(
-        chatId,
-        `Hi ${this.config.him}, I'm ${this.config.petName}. Talk to me any time: I'll remember things, set reminders and check in on you.\n\nJust so you know: I run on ${host} computer, so they can see our chats.`
-      );
-    }
-
-    if (!isMe) return;
-
-    if (name === "/status") {
-      const parts = this.now();
-      return this.telegram.sendText(
-        chatId,
-        [
-          `Paired: you ${this.state.me ? "yes" : "no"}, him ${this.state.him ? "yes" : "no"}`,
-          `Pet window open: ${this.petRunning ? "yes" : "no"}`,
-          `Local time ${parts.hhmm}, ${isWorkTime(parts, this.config.workHours) ? "work hours" : "off work"}`,
-          `Check-ins sent today: ${this.state.fired.length}/${(this.config.checkins || []).length}`,
-          `"Checking" nudges today: ${this.state.nudges}/${this.config.checking.maxNudgesPerDay}`,
-          `Claude: ${this.brain.client ? `on for ${this.brain.claudeFor.join(", ")}` : "off"}`,
-        ].join("\n")
-      );
-    }
-
-    if (name === "/test") {
-      const kind = args[0] || "howsYourDay";
-      if (!this.state.him) {
-        await this.telegram.sendText(chatId, "He hasn't paired yet, so here's a preview:");
-        return this.say(kind, { text: "checking", minutes: 20 }, { chatId, pet: false });
-      }
-      await this.say(kind, { text: "checking", minutes: 20 }, { chatId: this.state.him.chatId });
-      return this.telegram.sendText(chatId, `Sent "${kind}" to him.`);
     }
   }
 }

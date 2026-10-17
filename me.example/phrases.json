@@ -40,14 +40,6 @@
       "text": "okay that's enough work for today"
     }
   ],
-  "checking": [
-    {
-      "text": "hello? you said \"checking\" like 20 minutes ago"
-    },
-    {
-      "text": "still checking? i'm waiting"
-    }
-  ],
   "tap": [
     {
       "text": "hehe hi"
@@ -81,6 +73,14 @@
     },
     {
       "text": "call's done. everything okay?"
+    }
+  ],
+  "workingLate": [
+    {
+      "text": "still here? don't stay too late"
+    },
+    {
+      "text": "working late again? go home soon ok"
     }
   ]
 }

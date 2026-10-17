@@ -33,9 +33,9 @@ function isWorkTime(parts, workHours) {
   );
 }
 
-function isDue(parts, workHours, time) {
+function isDue(parts, workHours, time, grace = 10) {
   const late = parts.minutes - toMinutes(time);
-  return workHours.days.includes(parts.weekday) && late >= 0 && late < 10;
+  return workHours.days.includes(parts.weekday) && late >= 0 && late < grace;
 }
 
 module.exports = { localParts, isWorkTime, isDue, toMinutes };

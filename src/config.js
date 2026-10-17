@@ -41,8 +41,6 @@ function load() {
     style,
     dataDir: process.env.DESKPET_DATA || path.join(ROOT, "data"),
     env: {
-      telegramToken: process.env.TELEGRAM_BOT_TOKEN || secrets.telegramToken || "",
-      pairCode: process.env.PAIR_CODE || secrets.pairCode || "",
       anthropicKey: process.env.ANTHROPIC_API_KEY || secrets.anthropicKey || "",
     },
   };

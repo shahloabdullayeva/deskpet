@@ -107,11 +107,6 @@ window.chat.info().then((info) => {
   showFeeling(info.feeling);
   window.chat.onFeeling(showFeeling);
   status.classList.toggle("off", !info.online);
-  if (info.forwarded) {
-    const note = document.getElementById("note");
-    note.textContent = `${info.me} can read this chat`;
-    note.hidden = false;
-  }
   for (const entry of info.history) add(entry);
   if (!info.history.length) add({ role: "pet", text: `hi ${info.him}, it's me, ${info.petName}. talk to me whenever you want, I'll remember things and remind you of stuff too`, at: Date.now() });
 });

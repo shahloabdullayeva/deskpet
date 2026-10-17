@@ -42,11 +42,8 @@ function read(home) {
     wander: config.pet?.wander !== false,
     background: config.pet?.background || "black",
     size: ["small", "medium", "large"].includes(config.pet?.size) ? config.pet.size : "medium",
-    mode: config.pet?.mode === "phone" ? "phone" : "desktop",
     chatterMinutes: String([0, 90, 45, 20].reduce((best, option) => (Math.abs(option - (config.pet?.chatterMinutes ?? 45)) < Math.abs(best - (config.pet?.chatterMinutes ?? 45)) ? option : best))),
     anthropicKey: secrets.anthropicKey || "",
-    telegramToken: secrets.telegramToken || "",
-    pairCode: secrets.pairCode || `maomao${Math.floor(1000 + Math.random() * 9000)}`,
   };
 }
 
@@ -61,21 +58,23 @@ function write(home, form) {
     workHours: { start: form.start || "09:00", end: form.end || "18:00", days: (form.days || []).map(Number) },
     checkins: CHECKINS.filter((kind) => form.checkins?.[kind]?.on).map((kind) => ({ time: form.checkins[kind].time, kind })),
   });
+  const { mode, runBot, ...pet } = config.pet || {};
+  delete config.telegram;
+  delete config.checking;
   config.pet = {
-    ...(config.pet || {}),
+    ...pet,
     character: form.character || "maomao",
     sound: form.sound !== false,
     wander: form.wander !== false,
     background: form.background === "none" ? "none" : "black",
     size: ["small", "large"].includes(form.size) ? form.size : "medium",
-    mode: form.mode === "phone" ? "phone" : "desktop",
     chatterMinutes: Number(form.chatterMinutes) || 0,
   };
 
   fs.writeFileSync(path.join(home, "config.json"), JSON.stringify(config, null, 2));
   fs.writeFileSync(
     path.join(home, "secrets.json"),
-    JSON.stringify({ anthropicKey: String(form.anthropicKey || "").trim(), telegramToken: String(form.telegramToken || "").trim(), pairCode: form.pairCode }, null, 2)
+    JSON.stringify({ anthropicKey: String(form.anthropicKey || "").trim() }, null, 2)
   );
   fs.writeFileSync(path.join(home, "style.md"), String(form.style || ""));
   if (!fs.existsSync(path.join(home, "phrases.json"))) fs.copyFileSync(path.join(EXAMPLE, "phrases.json"), path.join(home, "phrases.json"));
