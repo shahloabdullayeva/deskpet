@@ -74,6 +74,27 @@ function textTexture(text, color) {
   return new THREE.CanvasTexture(canvas);
 }
 
+function angerTexture() {
+  const canvas = Object.assign(document.createElement("canvas"), { width: 64, height: 64 });
+  const ctx = canvas.getContext("2d");
+  ctx.lineCap = "round";
+  for (const [width, color] of [[11, "#ffffff"], [6, "#e2364f"]]) {
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    for (let i = 0; i < 4; i++) {
+      ctx.save();
+      ctx.translate(32, 32);
+      ctx.rotate((i * Math.PI) / 2);
+      ctx.beginPath();
+      ctx.moveTo(6, -20);
+      ctx.quadraticCurveTo(6, -6, 20, -6);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+  return new THREE.CanvasTexture(canvas);
+}
+
 function shadowTexture() {
   const canvas = Object.assign(document.createElement("canvas"), { width: 128, height: 128 });
   const ctx = canvas.getContext("2d");
@@ -210,6 +231,56 @@ export function createPet(canvas, { onPetted } = {}) {
   const herbNose = new THREE.Vector3(0.04, 1.55, 0.44);
   herb.position.copy(herbRest);
 
+  const paper = shade("#f4ecd8", "paper");
+  const stone = shade("#9c928a", "stone");
+  const props = new THREE.Group();
+  body.add(props);
+
+  const book = new THREE.Group();
+  props.add(book);
+  for (const side of [-1, 1]) {
+    const page = new THREE.Group();
+    page.rotation.y = side * -0.28;
+    book.add(page);
+    add(page, new THREE.BoxGeometry(0.17, 0.22, 0.012), mats.skirt, { pos: [side * 0.085, 0, -0.006], line: thinOutline });
+    add(page, new THREE.BoxGeometry(0.155, 0.2, 0.012), paper, { pos: [side * 0.085, 0, 0.006], line: null });
+  }
+  book.position.set(0, 1.02, 0.36);
+  book.rotation.x = -0.8;
+
+  const mortar = new THREE.Group();
+  props.add(mortar);
+  const bowl = [[0, 0], [0.08, 0], [0.11, 0.035], [0.12, 0.1], [0.105, 0.1], [0.09, 0.05], [0, 0.04]].map(([x, y]) => new THREE.Vector2(x, y));
+  add(mortar, new THREE.LatheGeometry(bowl, 24), stone, { line: thinOutline });
+  const pestle = add(mortar, new THREE.CapsuleGeometry(0.02, 0.16, 4, 8), stone, { line: thinOutline });
+  mortar.position.set(-0.03, 0.88, 0.34);
+
+  const foods = { tea: new THREE.Group(), dumpling: new THREE.Group(), herb: new THREE.Group(), mushroom: new THREE.Group() };
+  add(foods.tea, new THREE.CylinderGeometry(0.055, 0.042, 0.07, 18), paper, { line: thinOutline });
+  add(foods.tea, new THREE.CylinderGeometry(0.05, 0.05, 0.006, 18), mats.leaf, { pos: [0, 0.03, 0], line: null });
+  add(foods.dumpling, new THREE.SphereGeometry(0.065, 16, 12), paper, { scale: [1, 0.72, 0.85], line: thinOutline });
+  add(foods.dumpling, new THREE.ConeGeometry(0.03, 0.04, 8), paper, { pos: [0, 0.055, 0], line: null });
+  between(foods.herb, new THREE.CylinderGeometry(0.006, 0.008, 0.16, 6), mats.leaf, [0, -0.06, 0], [0.01, 0.1, 0], { line: null });
+  for (const [x, y, r] of [[0.03, 0.08, -0.7], [-0.025, 0.03, 0.6], [0.03, -0.01, -0.5]]) add(foods.herb, new THREE.SphereGeometry(0.035, 10, 8), mats.leaf, { pos: [x, y, 0], rot: [0, 0, r], scale: [1, 0.45, 0.6], line: thinOutline });
+  add(foods.mushroom, new THREE.CylinderGeometry(0.018, 0.024, 0.07, 10), paper, { pos: [0, -0.02, 0], line: thinOutline });
+  add(foods.mushroom, new THREE.SphereGeometry(0.06, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), shade("#c8303a"), { pos: [0, 0.01, 0], line: thinOutline });
+  for (const [x, z] of [[0.025, 0.035], [-0.03, 0.02], [0.005, -0.04], [0.035, -0.015]]) add(foods.mushroom, new THREE.SphereGeometry(0.009, 6, 6), paper, { pos: [x, 0.045, z], line: null });
+  for (const food of Object.values(foods)) {
+    food.visible = false;
+    props.add(food);
+  }
+  const foodRest = new THREE.Vector3(0.12, 0.98, 0.36);
+  const foodMouth = new THREE.Vector3(0.03, 1.66, 0.4);
+
+  const POSES = {
+    wave: (side, t) => (side === 1 ? { ax: -0.25, az: 2.5, ex: 0, ez: 0.5 + Math.sin(t * 11) * 0.45 } : null),
+    search: (side) => (side === 1 ? { ax: -2.0, az: 0.35, ex: -2.0, ez: 0.9 } : null),
+    read: () => ({ ax: -0.75, az: 0.18, ex: -1.25, ez: 0.45 }),
+    grind: (side, t) => (side === -1 ? { ax: -0.55, az: 0.12, ex: -1.25, ez: 0.6 } : { ax: -0.75 + Math.sin(t * 7) * 0.12, az: 0.15 + Math.cos(t * 7) * 0.1, ex: -1.35, ez: 0.75 }),
+    eat: (side, t, reach) => (side === 1 ? { ax: -0.4 - 1.1 * reach, az: 0.2, ex: -1.4 - 0.4 * reach, ez: 0.9 } : null),
+  };
+  const reachOf = (p) => (p < 0.25 ? p / 0.25 : p < 0.8 ? 1 : Math.max(0, (1 - p) / 0.2));
+
   const tail = new THREE.Group();
   tail.position.set(0, 0.62, -0.2);
   body.add(tail);
@@ -276,7 +347,7 @@ export function createPet(canvas, { onPetted } = {}) {
   scene.add(shadow);
 
   const sprites = [];
-  const spriteTextures = { heart: heartTexture("#ff6b93"), bang: textTexture("!", "#e2455f"), z: textTexture("z", "#7f86e8"), note: textTexture("?", "#5b8fd6") };
+  const spriteTextures = { heart: heartTexture("#ff6b93"), bang: textTexture("!", "#e2455f"), z: textTexture("z", "#7f86e8"), note: textTexture("?", "#5b8fd6"), anger: angerTexture() };
   function emit(kind, { at = [(Math.random() < 0.5 ? -1 : 1) * 0.45, 2.1, 0.3], scale = 0.26, life = 1.3, rise = 0.45, drift = 0.15 } = {}) {
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: spriteTextures[kind], transparent: true, depthWrite: false }));
     sprite.position.set(at[0] + (Math.random() - 0.5) * drift, at[1], at[2]);
@@ -360,7 +431,7 @@ export function createPet(canvas, { onPetted } = {}) {
   function eyeOpen(ctx, cx, side, open, gx, gy, wide) {
     const rx = 54 * (wide ? 1.06 : 1);
     const ry = 64 * (wide ? 1.12 : 1) * Math.max(open, 0.04);
-    const lid = state.character === "maomao" && !wide ? -ry * 0.62 : -ry;
+    const lid = state.character === "maomao" && !wide ? -ry * 0.86 : -ry;
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(cx, EYE_Y, rx, ry, 0, 0, Math.PI * 2);
@@ -507,6 +578,8 @@ export function createPet(canvas, { onPetted } = {}) {
     if (face === "talk") mouthKind = state.mouthOpen ? "open" : mouthKind;
     if (action === "sniff") [eyes, mouthKind] = ["happy", "smile"];
     if (action === "yawn") [eyes, mouthKind] = ["sleepy", "yawn"];
+    if (action === "wave") [eyes, mouthKind] = ["happy", "smile"];
+    if (action === "eat") [eyes, mouthKind] = [state.food === "mushroom" || state.food === "herb" ? "happy" : eyes, state.mouthOpen ? "open" : "cat"];
     if (state.held) [eyes, mouthKind] = ["pout", "o"];
     if (state.airborne || state.surprise > 0) [eyes, mouthKind] = ["wide", "o"];
     const blink = eyes === "open" ? state.blink : 0;
@@ -679,6 +752,10 @@ export function createPet(canvas, { onPetted } = {}) {
     if (action === "look") targetYaw = Math.sin(progress * Math.PI * 2) * 0.6;
     if (action === "yawn") targetPitch = -0.25 * bell;
     if (action === "sniff") [targetYaw, targetPitch] = [-0.15 * bell, 0.18 * bell];
+    if (action === "search") [targetYaw, targetPitch] = [Math.sin(progress * Math.PI * 3) * 0.65, -0.08];
+    if (action === "read") [targetYaw, targetPitch] = [Math.sin(t * 0.7) * 0.05, 0.4];
+    if (action === "grind") [targetYaw, targetPitch] = [0, 0.32];
+    if (action === "wave") [targetYaw, targetPitch] = [0, -0.05];
     if (state.face === "sleepy" && !still) targetPitch = 0.22 + Math.sin(t * 1.6) * 0.06;
     if (state.pet > 0.6) targetPitch = 0.12;
     if (state.walking) targetYaw = 0;
@@ -688,7 +765,7 @@ export function createPet(canvas, { onPetted } = {}) {
     head.rotation.x = state.pitch;
     head.rotation.z = (still ? 0.06 : Math.sin(t * 1.05) * 0.035) + (state.pet > 0.6 ? Math.sin(t * 5) * 0.08 : 0) + (action === "sniff" ? -0.1 * bell : 0);
 
-    state.gazeTarget = action === "look" ? [Math.sin(progress * Math.PI * 2), 0] : [Math.max(-1, Math.min(1, (targetYaw - state.yaw) * 3 + targetYaw * 0.6)), Math.max(-1, Math.min(1, targetPitch * 1.5))];
+    state.gazeTarget = action === "look" ? [Math.sin(progress * Math.PI * 2), 0] : action === "read" || action === "grind" ? [0, 1] : [Math.max(-1, Math.min(1, (targetYaw - state.yaw) * 3 + targetYaw * 0.6)), Math.max(-1, Math.min(1, targetPitch * 1.5))];
     state.gaze[0] += (state.gazeTarget[0] - state.gaze[0]) * Math.min(1, dt * 12);
     state.gaze[1] += (state.gazeTarget[1] - state.gaze[1]) * Math.min(1, dt * 12);
 
@@ -751,6 +828,35 @@ export function createPet(canvas, { onPetted } = {}) {
       elbow.rotation.z = -side * 0.55 * tucked * (1 - lifted);
     }
 
+    const fade = action ? Math.max(0, Math.min(1, state.actionAge / 0.35, (state.actionLength - state.actionAge) / 0.35)) : 0;
+    const reach = action === "eat" ? reachOf(progress) : 0;
+    if (POSES[action]) {
+      for (const [i, arm] of arms.entries()) {
+        const side = i ? 1 : -1;
+        const target = POSES[action](side, t, reach);
+        if (!target) continue;
+        const elbow = arm.userData.elbow;
+        arm.rotation.x += (target.ax - arm.rotation.x) * fade;
+        arm.rotation.z += (side * target.az - arm.rotation.z) * fade;
+        elbow.rotation.x += (target.ex - elbow.rotation.x) * fade;
+        elbow.rotation.z += (-side * target.ez - elbow.rotation.z) * fade;
+      }
+    }
+    book.visible = action === "read";
+    mortar.visible = action === "grind";
+    if (mortar.visible) {
+      pestle.position.set(Math.cos(t * 7) * 0.04, 0.12, Math.sin(t * 7) * 0.04);
+      pestle.rotation.set(Math.sin(t * 7) * 0.35, 0, -Math.cos(t * 7) * 0.35);
+    }
+    for (const [kind, food] of Object.entries(foods)) {
+      food.visible = action === "eat" && state.food === kind && progress < 0.97;
+      if (!food.visible) continue;
+      food.position.lerpVectors(foodRest, foodMouth, reach);
+      food.scale.setScalar(1 - 0.75 * Math.max(0, Math.min(1, (progress - 0.35) / 0.45)));
+    }
+    if (action === "eat" && reach > 0.9) state.mouthOpen = Math.sin(t * 14) > 0;
+    if (action === "eat" && progress > 0.8 && state.mouthOpen) state.mouthOpen = false;
+
     herb.visible = action === "sniff";
     if (herb.visible) herb.position.lerpVectors(herbRest, herbNose, Math.min(1, bell * 1.6));
 
@@ -784,7 +890,7 @@ export function createPet(canvas, { onPetted } = {}) {
       head.rotation.z += state.lieSide * -0.25 * lie;
     }
 
-    shadow.visible = !state.held && !state.airborne;
+    shadow.visible = false;
     const lift = Math.min(1, state.hopY / 1.2);
     shadow.scale.setScalar(1 - lift * 0.4);
     shadow.scale.x *= 1 + lie * 0.9;
@@ -879,6 +985,20 @@ export function createPet(canvas, { onPetted } = {}) {
       state.hopY = 0.001;
       emit("heart", { scale: 0.24 });
     },
+    angry() {
+      state.surprise = 0;
+      bounce(0.6);
+      state.hopV = 2.6;
+      state.hopY = 0.001;
+      for (const delay of [0, 900, 1800]) setTimeout(() => emit("anger", { at: [0.38, 2.12, 0.25], scale: 0.26, life: 1.4, rise: 0.12, drift: 0.04 }), delay);
+    },
+    feed(kind) {
+      state.food = foods[kind] ? kind : "dumpling";
+      state.action = "eat";
+      state.actionAge = 0;
+      state.actionLength = 3.4;
+      if (kind === "mushroom") state.pet = 1.4;
+    },
     jump() {
       if (state.hopY > 0) return;
       state.hopV = 2.2;
@@ -897,6 +1017,13 @@ export function createPet(canvas, { onPetted } = {}) {
       state.asleep = asleep;
       if (side) state.lieSide = side;
       if (asleep) state.hops = 0;
+    },
+    cheer() {
+      emit("heart", { scale: 0.3 });
+      if (state.hopY <= 0) {
+        state.hopV = 3;
+        state.hopY = 0.001;
+      }
     },
     wonder() {
       emit("note", { at: [0.44, 2.2, 0.2], scale: 0.22, life: 1.6, rise: 0.25, drift: 0 });

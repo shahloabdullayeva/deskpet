@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-const CHANNELS = ["say", "mood", "look", "walked", "flash", "visible", "hover", "nap", "pinned", "call", "cursor", "size", "airborne", "bounce", "landed"];
+const CHANNELS = ["say", "mood", "look", "walked", "flash", "visible", "hover", "nap", "feed", "welcome", "angry", "chase", "reach", "caught", "pinned", "call", "cursor", "size", "airborne", "bounce", "landed"];
 
 contextBridge.exposeInMainWorld("pet", {
   ready: () => ipcRenderer.send("ready"),
@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld("pet", {
   walk: (dx) => ipcRenderer.send("walk", dx),
   stopWalking: () => ipcRenderer.send("stop-walking"),
   nap: () => ipcRenderer.send("nap"),
+  ate: (kind) => ipcRenderer.send("ate", kind),
   menu: () => ipcRenderer.send("menu"),
   on: (channel, callback) => {
     if (CHANNELS.includes(channel)) ipcRenderer.on(channel, (_event, payload) => callback(payload));

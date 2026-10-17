@@ -52,3 +52,35 @@ test("stays awake and teases him when he works late", async () => {
   idle.seconds = 3600;
   assert.strictEqual(pet.feel(at("17:30")).feeling, "sleepy");
 });
+
+test("awake whenever they're at the computer, even on a weekend, and dozes once they leave", () => {
+  const idle = { seconds: 5 };
+  const { pet } = makePet(idle);
+  assert.notStrictEqual(pet.feel(at("11:00", 6)).feeling, "sleepy");
+  assert.notStrictEqual(pet.feel(at("21:00", 3)).feeling, "sleepy");
+  idle.seconds = 15 * 60;
+  assert.strictEqual(pet.feel(at("11:00", 6)).feeling, "sleepy");
+  assert.notStrictEqual(pet.feel(at("11:00", 3)).feeling, "sleepy");
+  idle.seconds = 45 * 60;
+  assert.strictEqual(pet.feel(at("11:00", 3)).feeling, "sleepy");
+  idle.seconds = 5;
+  assert.strictEqual(pet.feel(at("03:00", 3)).feeling, "sleepy");
+});
+
+test("sleeps and wakes when told, and gets angry when switched back and forth", () => {
+  const idle = { seconds: 5 };
+  const { pet } = makePet(idle);
+  const lines = [];
+  pet.events.on("say", ({ text }) => lines.push(text));
+  pet.now = () => at("11:00", 3);
+  pet.sleepNow(true);
+  assert.strictEqual(pet.feel().feeling, "sleepy");
+  pet.sleepNow(false);
+  assert.notStrictEqual(pet.feel().feeling, "sleepy");
+  assert.match(pet.sleepNow(true), /annoyed/);
+  assert.strictEqual(pet.feel().feeling, "annoyed");
+  assert.match(pet.sleepNow(true), /Refused/);
+  assert.strictEqual(lines.length, 4);
+  pet.fed("dumpling");
+  assert.notStrictEqual(pet.feel().feeling, "annoyed");
+});

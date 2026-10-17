@@ -7,11 +7,15 @@ const { localParts, isWorkTime, isDue, toMinutes } = require("./clock");
 const { Brain, stripEmoji } = require("./brain");
 const { Memory } = require("./memory");
 
-const FACES = { sleepy: "sleepy", lonely: "pout", happy: "happy", calm: "idle" };
+const FACES = { sleepy: "sleepy", lonely: "pout", happy: "happy", calm: "idle", annoyed: "pout" };
+const TOGGLE_WINDOW = 3 * 60_000;
+const ANGRY_FOR = 5 * 60_000;
 const LONELY_AFTER_MINUTES = 150;
 
 const MOODS = { tap: "happy", reply: "happy", goodbye: "happy", morning: "happy", workingLate: "pout" };
 const AWAY_AFTER_SECONDS = 5 * 60;
+const DOZE_AFTER_SECONDS = 10 * 60;
+const NAP_AFTER_SECONDS = 30 * 60;
 const WORKING_LATE_AFTER_MINUTES = 60;
 
 class Deskpet {
@@ -33,6 +37,53 @@ class Deskpet {
     this.lastChatter = Date.now();
     this.feeling = null;
     this.startedAt = Date.now();
+    this.override = null;
+    this.toggles = [];
+    this.annoyedUntil = 0;
+  }
+
+  line(kind, mood = "talk") {
+    const text = stripEmoji(this.brain.pick(kind).text);
+    this.events.emit("say", { text, chime: false, mood });
+    return text;
+  }
+
+  sleepNow(sleep, { quiet = false } = {}) {
+    const now = Date.now();
+    if (now < this.annoyedUntil) {
+      if (!quiet) this.line("refuse", "pout");
+      return "Refused: you're annoyed because they keep waking you up and putting you to sleep. Tell them so, briefly.";
+    }
+    const asleep = this.feel().feeling === "sleepy";
+    if (asleep === sleep) {
+      if (!quiet) this.line(sleep ? "alreadyAsleep" : "alreadyAwake");
+      return sleep ? "You were already asleep." : "You were already awake.";
+    }
+    this.toggles = this.toggles.filter((at) => now - at < TOGGLE_WINDOW).concat(now);
+    if (this.toggles.length >= 3) {
+      this.toggles = [];
+      this.override = null;
+      this.annoyedUntil = now + ANGRY_FOR;
+      this.events.emit("angry");
+      this.updateFeeling();
+      if (!quiet) this.line("annoyed", "pout");
+      return "Refused and now annoyed: they've switched you between asleep and awake three times in a few minutes. Stay awake and grumpy, tell them off in one short line.";
+    }
+    this.override = { sleep, until: now + (sleep ? 8 : 3) * 3600_000 };
+    this.touch();
+    if (!quiet) this.line(sleep ? "goToSleep" : "wakeUp", sleep ? "sleepy" : "talk");
+    return sleep ? "Done: you're going to sleep now. Say goodnight in your way." : "Done: you're awake now. React to being woken up.";
+  }
+
+  fed(kind) {
+    this.touch();
+    if (this.feel().feeling === "sleepy") return this.line("sleepyFood", "sleepy");
+    if (Date.now() < this.annoyedUntil) {
+      this.annoyedUntil = 0;
+      this.updateFeeling();
+      return this.line("fedAngry", "happy");
+    }
+    return this.line(`fed_${kind}`, "happy");
   }
 
   atComputer() {
@@ -45,8 +96,16 @@ class Deskpet {
   }
 
   feel(parts = this.now()) {
+    const idle = this.idleSeconds();
+    const now = Date.now();
+    if (now < this.annoyedUntil) return { feeling: "annoyed", why: "they keep waking you up and putting you to sleep" };
+    if (this.override && (now > this.override.until || (!this.override.sleep && idle >= NAP_AFTER_SECONDS))) this.override = null;
+    if (this.override?.sleep) return { feeling: "sleepy", why: "they told you to go to sleep" };
+    const awake = this.override && !this.override.sleep;
     if (this.workingLate(parts)) return { feeling: "calm", why: "they're still working after their usual hours" };
-    if (!isWorkTime(parts, this.config.workHours)) return { feeling: "sleepy", why: "it's outside work hours" };
+    if (!awake && idle >= DOZE_AFTER_SECONDS && !isWorkTime(parts, this.config.workHours)) return { feeling: "sleepy", why: "nobody's at the computer and it's outside work hours" };
+    if (!awake && idle >= NAP_AFTER_SECONDS) return { feeling: "sleepy", why: "they've been away from the computer for a while" };
+    if (!awake && parts.minutes >= 60 && parts.minutes < 360) return { feeling: "sleepy", why: "it's the middle of the night" };
     const minutes = Math.round((Date.now() - Math.max(this.state.lastTalk || 0, this.startedAt)) / 60_000);
     if (this.state.lastTalk && Date.now() - this.state.lastTalk < 20 * 60_000) return { feeling: "happy", why: "you just talked" };
     if (minutes >= LONELY_AFTER_MINUTES) return { feeling: "lonely", why: `nobody has talked to you for about ${Math.round(minutes / 60)} hours` };
@@ -133,6 +192,7 @@ class Deskpet {
         if (name === "list_reminders") {
           return memory.reminders.map((r) => `[${r.id}] ${memory.format(r.due)}: ${r.text}`).join("\n") || "No reminders.";
         }
+        if (name === "sleep") return this.sleepNow(Boolean(input.sleep), { quiet: true });
         if (name === "cancel_reminder") return memory.cancel(input.id) ? "Cancelled." : "No reminder with that id.";
         throw new Error(`Unknown tool ${name}`);
       },

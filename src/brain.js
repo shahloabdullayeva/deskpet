@@ -16,6 +16,22 @@ const TASKS = {
 };
 
 const FALLBACK = {
+  goToSleep: [{ text: "fine. wake me if something's on fire" }, { text: "finally. goodnight" }, { text: "sleeping. don't touch my herbs" }],
+  wakeUp: [{ text: "hm. i'm up. what" }, { text: "you woke me. this better be good" }, { text: "i was dreaming about mushrooms. what is it" }],
+  alreadyAsleep: [{ text: "i'm already asleep. obviously" }, { text: "zzz. still asleep" }],
+  alreadyAwake: [{ text: "i'm awake. look at me" }, { text: "i'm already up" }],
+  annoyed: [{ text: "can you make up your mind. i'm not a light switch" }, { text: "awake, asleep, awake. no. i'm staying like this" }, { text: "do that again and i'm putting something in your tea" }],
+  refuse: [{ text: "no." }, { text: "not listening." }, { text: "ask me later." }],
+  sleepyFood: [{ text: "zzz… later" }, { text: "mm. leave it there, i'll eat it when i'm up" }],
+  fed_tea: [{ text: "ah. warm. you're useful sometimes" }, { text: "good tea. not poisoned, sadly" }, { text: "jasmine? fine. you can stay" }],
+  fed_dumpling: [{ text: "mm. food. finally someone gets it" }, { text: "pork and cabbage. acceptable" }, { text: "i'll allow it" }],
+  fed_herb: [{ text: "is this angelica? you know me" }, { text: "fresh. where did you even find this" }, { text: "good for the stomach. bad for your breath. i'll take it" }],
+  fed_mushroom: [{ text: "wait. this is poisonous. thank you" }, { text: "my tongue's going numb. perfect" }, { text: "oh, this one makes your heart race. i love it" }],
+  welcomeBack: [{ text: "oh, you're back" }, { text: "there you are" }, { text: "took you long enough" }, { text: "welcome back. i didn't touch anything" }],
+  toyCaught: [{ text: "got it" }, { text: "too slow" }, { text: "again" }, { text: "that's mine now" }],
+  toyBored: [{ text: "i'm done playing. put it away" }, { text: "okay that's enough exercise for a year" }],
+  chaseLost: [{ text: "fine. keep your mouse" }, { text: "i wasn't even trying" }],
+  fedAngry: [{ text: "you think food fixes this? ...fine. it does a little" }, { text: "bribery. it works. don't tell anyone" }],
   workingLate: [{ text: "still here? don't stay too late" }, { text: "working late again? go home soon ok" }],
   afterCall: [{ text: "how did the call go? did it get settled?" }, { text: "call's done. everything okay?" }, { text: "that was a long one. how did it go?" }],
 };
@@ -176,6 +192,11 @@ const TOOLS = [
       required: ["text"],
       additionalProperties: false,
     },
+  },
+  {
+    name: "sleep",
+    description: "Go to sleep (sleep: true) or wake up (sleep: false) when they ask you to. The result says whether it worked or whether you refused because they keep switching you back and forth.",
+    input_schema: { type: "object", properties: { sleep: { type: "boolean" } }, required: ["sleep"], additionalProperties: false },
   },
   {
     name: "list_reminders",

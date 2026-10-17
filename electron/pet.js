@@ -7,7 +7,9 @@ const art = document.getElementById("art");
 const sceneEl = document.getElementById("scene");
 const rootEl = document.documentElement;
 
-const ACTIONS = { look: 3, sniff: 3.2, yawn: 2.6, stretch: 2.4 };
+const ACTIONS = { look: 3, sniff: 3.2, yawn: 2.6, stretch: 2.4, read: 7, grind: 5.5 };
+const SECONDS = { ...ACTIONS, wave: 2.6, search: 4.5 };
+const LONELY_AFTER = 10 * 60_000;
 
 const model = start3d();
 
@@ -18,7 +20,7 @@ function start3d() {
     console.warn(`3D failed, showing her picture instead: ${error.message}`);
     const still = () => {};
     const flat = { cursor: () => false, partAt: () => null, bounds: () => null };
-    for (const name of ["setLook", "setFace", "setMouth", "act", "setWalking", "setHeld", "drag", "setAirborne", "land", "poke", "spin", "jump", "hop", "wonder", "setAsleep", "setPaused"]) flat[name] = still;
+    for (const name of ["setLook", "setFace", "setMouth", "act", "setWalking", "setHeld", "drag", "setAirborne", "land", "poke", "spin", "jump", "hop", "wonder", "setAsleep", "setPaused", "feed", "angry", "cheer"]) flat[name] = still;
     flat.flat = true;
     return flat;
   }
@@ -32,6 +34,8 @@ let wander = true;
 let pinned = false;
 let paused = false;
 let napping = false;
+let lastTouched = Date.now();
+const touched = () => (lastTouched = Date.now());
 let talking = false;
 let walking = false;
 let airborne = false;
@@ -110,7 +114,7 @@ function say({ text, mood, chime: ring }) {
 }
 
 function act(name) {
-  model.act(name, ACTIONS[name]);
+  model.act(name, SECONDS[name] || 3);
 }
 
 function walk() {
@@ -130,6 +134,7 @@ function live() {
   setTimeout(live, 15000 + Math.random() * 30000);
   if (talking || walking || hovered || held || airborne || asleep() || face !== base || paused) return;
   const roll = Math.random();
+  if (Date.now() - lastTouched > LONELY_AFTER && roll < 0.35) return act("search");
   if (roll < 0.05) return model.hop();
   if (wander && !pinned && base !== "pout" && roll < 0.27) return walk();
   if (roll < 0.35) return model.wonder();
@@ -212,6 +217,7 @@ window.addEventListener("mousemove", (event) => {
 petEl.addEventListener("mousedown", (event) => {
   if (event.button !== 0 || !(hovered || hitAt(event.clientX, event.clientY))) return;
   setHovered(true);
+  touched();
   window.pet.hold(true);
   down = { x: event.screenX, y: event.screenY, moved: false };
   samples = [{ x: event.screenX, y: event.screenY, t: performance.now() }];
@@ -262,6 +268,32 @@ window.pet.on("cursor", ({ x, y }) => {
 });
 window.pet.on("hover", (over) => {
   if (!down) setHovered(over);
+  if (over && Date.now() - lastTouched > LONELY_AFTER && !asleep() && !talking) act("wave");
+  if (over) touched();
+});
+window.pet.on("feed", (kind) => {
+  if (asleep() || held || airborne) return;
+  touched();
+  if (walking) window.pet.stopWalking();
+  model.feed(kind);
+  setTimeout(() => window.pet.ate(kind), 3000);
+});
+window.pet.on("welcome", () => {
+  touched();
+  if (!asleep() && !held && !airborne) act("wave");
+});
+window.pet.on("angry", () => model.angry());
+window.pet.on("chase", (dir) => {
+  touched();
+  walking = Boolean(dir);
+  model.setWalking(dir);
+  if (dir) petEl.classList.toggle("left", dir < 0);
+  render();
+});
+window.pet.on("reach", () => model.hop());
+window.pet.on("caught", () => {
+  touched();
+  model.cheer();
 });
 document.documentElement.addEventListener("mouseleave", () => {
   if (!down) setHovered(false);
@@ -332,7 +364,6 @@ window.pet.on("look", (look) => {
   images = look.images || {};
   volume = look.volume;
   wander = look.wander !== false;
-  rootEl.classList.toggle("bg-black", look.background !== "none");
   rootEl.classList.toggle("catgirl", look.character === "catgirl");
   rootEl.style.setProperty("--size", `${look.size}px`);
   model.setLook({ character: look.character, colors: look.colors });
@@ -340,3 +371,4 @@ window.pet.on("look", (look) => {
 });
 window.pet.ready();
 setTimeout(live, 8000);
+setTimeout(() => !asleep() && !talking && act("wave"), 3000);

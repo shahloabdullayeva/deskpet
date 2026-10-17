@@ -96,6 +96,23 @@ everyone on their own.
 - **Working late:** after your work day ends she stays awake as long as you're still working. If
   you're still there an hour later, she tells you once not to stay too long. She only gets sleepy
   once you've actually gone.
+- **Feed her** (right-click → Feed her): tea, a dumpling, fresh herbs, or a suspicious mushroom.
+  She eats it in front of you and reacts. She's an apothecary, so the poisonous one is her
+  favourite. Feeding her also gets her over being angry. If she's asleep she'll save it for later.
+- **Play with her** (right-click → Play with her): a little herb bundle on a string appears.
+  Drag it around and she runs after it, jumps for it when you hold it over her head, and when it
+  lands near her she bats it across the screen and chases it again. Right-click the toy, or the
+  menu, to put it away; she gets bored after a few minutes of nobody touching it.
+  On Windows she also chases the mouse pointer itself if you wiggle it fast near her, and sulks if
+  you pull it away. (On Linux apps can't see the pointer unless it's over them, so it's the toy.)
+- **Go to sleep / Wake up** (right-click, or just tell her in the chat). Wake her, put her to sleep
+  and wake her again within a few minutes and she gets angry: a red anger mark, a stomp, a grumpy
+  line, and she refuses to be switched for a few minutes. Food helps.
+- **She waves** when you come back after being away for 10 minutes or more, when she starts, and
+  when you finally hover over her after ignoring her. If nobody's touched her for a while she puts
+  her hand over her eyes and looks around for you.
+- **She keeps busy:** reads a little book, grinds herbs with a mortar and pestle, sniffs her herbs,
+  stretches, yawns, walks a few steps, hops.
 - **Double-click her** and she spins and does a little jump.
 - **Stroke her head** with the mouse (move it back and forth over her hair): she closes her eyes,
   blushes and little hearts float up. Sometimes she says something about it.
@@ -107,7 +124,9 @@ everyone on their own.
 - **She watches you:** her head and eyes follow the mouse while it's near her.
 - Now and then she walks a few steps, does a little hop where she stands, sniffs her herbs,
   stretches or yawns. She never jumps off to somewhere else on the screen by herself.
-- **Asleep** after work: she walks to the nearest bottom corner of the screen and lies down
+- **Awake whenever you're at the computer**, any day of the week. She dozes off once you've been
+  away for 10 minutes outside work hours (30 minutes during them), and at night between 1 and 6.
+- **Asleep**: she walks to the nearest bottom corner of the screen and lies down
   there on her side, head toward the wall, eyes shut, little Zs, perfectly still. No walking,
   hopping or following the mouse until she wakes up and gets back on her feet. If she's pinned
   she lies down right where she is. Pick her up and she wakes enough to dangle; put her down and
@@ -123,8 +142,7 @@ everyone on their own.
 
 ## Settings
 
-- **Your name**, her name and look (Maomao or cat-girl), her size, and whether she has a soft
-  dark glow behind her (so she stands out on busy wallpapers) or nothing.
+- **Your name**, her name and look (Maomao or cat-girl), and her size.
 - **Claude API key**: needed for chatting, memories and reminders. It stays on your computer.
 - **She texts like** and **How she should talk**: optional. Leave them empty and she talks as
   Maomao: calm, a little deadpan, into herbs and medicine, and makes sure you eat and drink water.

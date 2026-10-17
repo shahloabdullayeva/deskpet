@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const CHECKINS = { morning: "Good morning", howsYourDay: "How's your day", lunch: "Lunch reminder", water: "Drink water", goodbye: "Home time" };
-const FIELDS = ["name", "petName", "character", "size", "background", "chatterMinutes", "anthropicKey", "talksLike", "style", "start", "end", "timezone"];
+const FIELDS = ["name", "petName", "character", "size", "chatterMinutes", "anthropicKey", "talksLike", "style", "start", "end", "timezone"];
 let form;
 
 function fill(values) {
