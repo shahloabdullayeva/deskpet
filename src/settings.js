@@ -17,9 +17,12 @@ function read(home) {
   const config = readJson(path.join(home, "config.json"), null) || readJson(path.join(EXAMPLE, "config.json"), {});
   const secrets = readJson(path.join(home, "secrets.json"), {});
   let style = "";
-  try {
-    style = fs.readFileSync(path.join(home, "style.md"), "utf8");
-  } catch {}
+  for (const dir of [home, EXAMPLE]) {
+    try {
+      style = fs.readFileSync(path.join(dir, "style.md"), "utf8");
+      break;
+    } catch {}
+  }
   const defaults = readJson(path.join(EXAMPLE, "config.json"), {}).checkins || [];
   const checkins = {};
   for (const kind of CHECKINS) {
