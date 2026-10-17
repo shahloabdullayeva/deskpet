@@ -444,10 +444,36 @@ function startUpdates() {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.logger = null;
-  autoUpdater.on("error", (error) => console.warn(`[update] ${error.message}`));
-  autoUpdater.on("update-downloaded", () => {
-    updateReady = true;
+  let manual = false;
+  const tell = (text) => send("say", { text, mood: "talk", chime: false });
+  autoUpdater.on("error", (error) => {
+    console.warn(`[update] ${error.message}`);
+    updateStatus = "";
     refreshTray();
+    if (manual) tell(`couldn't get the update: ${String(error.message).split("\n")[0].slice(0, 120)}`);
+    manual = false;
+  });
+  autoUpdater.on("update-not-available", () => {
+    if (manual) tell(`i'm already the newest version (${app.getVersion()})`);
+    manual = false;
+  });
+  autoUpdater.on("update-available", (info) => {
+    updateStatus = `Downloading ${info.version}…`;
+    refreshTray();
+    if (manual) tell(`found ${info.version}, downloading it now. give me a minute`);
+  });
+  autoUpdater.on("download-progress", (progress) => {
+    const label = `Downloading update… ${Math.round(progress.percent)}%`;
+    if (label === updateStatus) return;
+    updateStatus = label;
+    refreshTray();
+  });
+  autoUpdater.on("update-downloaded", (info) => {
+    updateReady = true;
+    updateStatus = "";
+    refreshTray();
+    if (manual) tell(`${info.version} is ready. right-click me and pick restart to update`);
+    manual = false;
     const install = setInterval(() => {
       const busy = alive(chatWin) && chatWin.isFocused();
       if (busy || powerMonitor.getSystemIdleTime() < 120) return;
@@ -459,10 +485,16 @@ function startUpdates() {
   const check = () => autoUpdater.checkForUpdates().catch((error) => console.warn(`[update] ${error.message}`));
   setTimeout(check, 30_000);
   setInterval(check, 10 * 60_000);
-  return check;
+  return () => {
+    if (updateStatus) return tell("already downloading it, hold on");
+    manual = true;
+    tell("checking for updates…");
+    check();
+  };
 }
 
 let checkUpdates;
+let updateStatus = "";
 
 function menu() {
   const quietFor = (minutes) => () => (hiddenUntil = Date.now() + minutes * 60_000);
@@ -483,7 +515,11 @@ function menu() {
     { label: "Settings…", click: openSettings },
     updateReady
       ? { label: "Restart to update", click: () => require("electron-updater").autoUpdater.quitAndInstall(true, true) }
-      : { label: `Check for updates (v${app.getVersion()})`, enabled: Boolean(checkUpdates), click: () => checkUpdates?.() },
+      : updateStatus
+        ? { label: updateStatus, enabled: false }
+        : process.env.PORTABLE_EXECUTABLE_DIR
+          ? { label: `v${app.getVersion()} (portable: install Maomao-Setup.exe for updates)`, enabled: false }
+          : { label: `Check for updates (v${app.getVersion()})`, enabled: Boolean(checkUpdates), click: () => checkUpdates?.() },
     { type: "separator" },
     { label: "Quit", click: () => app.quit() },
   ]);

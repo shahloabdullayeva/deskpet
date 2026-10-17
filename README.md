@@ -69,8 +69,9 @@ Notes for Linux:
 She updates herself. Every 10 minutes (and 30 seconds after she starts) she checks the
 [release page](https://github.com/shahloabdullayeva/deskpet/releases/latest), downloads a newer
 version in the background, and restarts into it the next time nobody has touched the computer for
-two minutes ("brb, getting an update"). Right-click her for **Check for updates** or, once one is
-downloaded, **Restart to update**. The menu shows which version is running.
+two minutes ("brb, getting an update"). Right-click her for **Check for updates**: she says what she
+found ("checking…", "found 0.2.9, downloading it now", "i'm already the newest version"), the menu
+shows the download percentage, and once it's downloaded the menu says **Restart to update**. The menu shows which version is running.
 
 - Windows installer and Linux AppImage: fully automatic.
 - Linux .deb and .rpm: automatic too, but Linux asks for your password to install it.
