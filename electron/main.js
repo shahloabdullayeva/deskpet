@@ -36,6 +36,7 @@ let chatWin;
 let callStarted = 0;
 let fallTimer;
 let size = 140;
+let quitting = false;
 
 const PLACE = path.join(app.getPath("userData"), "place.json");
 let place = {};
@@ -83,6 +84,7 @@ function stopTimers() {
 }
 
 function restart() {
+  quitting = true;
   stopTimers();
   app.relaunch(process.env.APPIMAGE ? { execPath: process.env.APPIMAGE, args: process.argv.slice(1) } : undefined);
   app.exit(0);
@@ -162,6 +164,15 @@ function createWindow() {
     hasShadow: false,
     icon: ICON,
     webPreferences: { preload: path.join(__dirname, "preload.js"), backgroundThrottling: false },
+  });
+  win.on("close", (event) => {
+    if (quitting) return;
+    event.preventDefault();
+    win.hide();
+  });
+  win.on("closed", () => {
+    win = null;
+    if (!quitting) createWindow();
   });
   win.on("hide", () => send("visible", false));
   win.on("show", () => send("visible", true));
@@ -412,7 +423,10 @@ function menu() {
   ]);
 }
 
-app.on("second-instance", () => alive(win) && win.show());
+app.on("second-instance", () => {
+  if (alive(win)) win.show();
+  else if (pet) createWindow();
+});
 
 process.on("uncaughtException", (error) => console.error("[main]", error));
 
@@ -505,6 +519,7 @@ app.whenReady().then(() => {
 });
 
 app.on("before-quit", () => {
+  quitting = true;
   stopTimers();
   pet?.stop();
 });
