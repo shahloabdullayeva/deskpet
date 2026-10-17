@@ -6,11 +6,13 @@ const TASKS = {
   lunch: () => "Remind them to eat lunch.",
   water: () => "Remind them to drink water.",
   goodbye: () => "Work is over; tell them to wrap up and head home.",
-  tap: () => "They just poked you on their screen. React cutely.",
+  tap: () => "They just poked you on their screen. React like you were busy with something more important: dry, a little annoyed, maybe a small roast. Never cute.",
   chatter: (context) =>
-    `Send one short casual message out of nowhere, like a friend texting during the day: ask how something you remember is going, comment on the time of day, or say something small and sweet. One or two short sentences.\n\n${context.memory || ""}`,
+    `Send one short casual message out of nowhere, like a friend texting during the day: ask how something you remember is going, comment on the time of day, or make a dry little observation about them. One or two short sentences.\n\n${context.memory || ""}`,
   afterCall: (context) =>
     `They just finished a work call of about ${context.minutes} minutes. Casually ask how it went, for example whether things got settled. One short sentence.`,
+  roast: (context) =>
+    `Out of nowhere, roast them a little, the way Maomao judges people who don't take care of themselves: their posture, how long they've been staring at the screen, their snacking, their sleep, their life choices, or something you remember about them. It's ${context.time} on a ${context.day}. Dry and short, affectionate underneath, never actually mean or about their looks. One sentence, maybe two.\n\n${context.memory || ""}`,
   workingLate: (context) =>
     `Their work day ended about ${context.minutes} minutes ago but they are still at the computer. Gently tease them for staying late and tell them not to stay too long. One short sentence.`,
 };
@@ -28,9 +30,37 @@ const FALLBACK = {
   fed_herb: [{ text: "is this angelica? you know me" }, { text: "fresh. where did you even find this" }, { text: "good for the stomach. bad for your breath. i'll take it" }],
   fed_mushroom: [{ text: "wait. this is poisonous. thank you" }, { text: "my tongue's going numb. perfect" }, { text: "oh, this one makes your heart race. i love it" }],
   welcomeBack: [{ text: "oh, you're back" }, { text: "there you are" }, { text: "took you long enough" }, { text: "welcome back. i didn't touch anything" }],
-  toyCaught: [{ text: "got it" }, { text: "too slow" }, { text: "again" }, { text: "that's mine now" }],
-  toyBored: [{ text: "i'm done playing. put it away" }, { text: "okay that's enough exercise for a year" }],
-  chaseLost: [{ text: "fine. keep your mouse" }, { text: "i wasn't even trying" }],
+  roast: [
+    { text: "you've been staring at that screen like it owes you money" },
+    { text: "sit up. your spine is filing a complaint" },
+    { text: "when did you last drink water. that wasn't a question, it was a diagnosis" },
+    { text: "i've seen corpses with better posture" },
+    { text: "you sigh a lot for someone who chose this" },
+    { text: "your face says you've read the same line four times" },
+    { text: "i could make a tonic for whatever this is. it would taste terrible. you'd deserve it" },
+    { text: "impressive. you've done almost nothing for a while now" },
+    { text: "coffee is not a food group. i checked" },
+    { text: "you look like you slept four hours. don't tell me, i don't want to be right" },
+    { text: "blink. you're drying out like a herb on a rack" },
+    { text: "if stress was medicine you'd be immortal" },
+    { text: "i'm not saying you're slow. i'm saying i've watched mushrooms grow faster" },
+    { text: "keep frowning like that and it stays. i've seen the cases" },
+    { text: "you work like someone who's never been poisoned. lucky" },
+    { text: "that's a lot of tabs for one brain" },
+    { text: "the court physician would be worried about you. i'm just amused" },
+    { text: "stand up. walk. you're not a houseplant, even if you act like one" },
+    { text: "you snack like nobody's watching. i'm watching" },
+    { text: "you call that a break? i've had longer blinks" },
+    { text: "honestly, i'd prescribe you a nap and a personality" },
+    { text: "you're doing fine. by your standards" },
+    { text: "i've tested poisons on myself with more caution than you write emails" },
+    { text: "stop chewing your lip. it's not lunch" },
+    { text: "you type like the keyboard insulted your family" },
+  ],
+  thrown: [{ text: "rude. i'm a trained apothecary, not a ball" }, { text: "throw me again and i'm seasoning your tea" }, { text: "my herbs. you scattered my herbs" }, { text: "wow. very mature" }, { text: "that's going in my notes. under 'people to poison'" }],
+  dropped: [{ text: "put me down gently next time" }, { text: "do i look like luggage" }, { text: "hands. off" }, { text: "fine. here's good. i guess" }],
+  bigger: [{ text: "finally, a size that matches my importance" }, { text: "yes. bigger. you need supervising" }, { text: "good. now you can see me judging you" }],
+  smaller: [{ text: "shrinking me won't make me quieter" }, { text: "smaller. like your attention span" }, { text: "fine. i'll judge you from down here" }],
   fedAngry: [{ text: "you think food fixes this? ...fine. it does a little" }, { text: "bribery. it works. don't tell anyone" }],
   workingLate: [{ text: "still here? don't stay too late" }, { text: "working late again? go home soon ok" }],
   afterCall: [{ text: "how did the call go? did it get settled?" }, { text: "call's done. everything okay?" }, { text: "that was a long one. how did it go?" }],
@@ -57,7 +87,7 @@ class Brain {
   }
 
   async write(kind, context = {}) {
-    if (!this.client || !(this.claudeFor.includes(kind) || ["chatter", "afterCall", "workingLate"].includes(kind))) return this.pick(kind);
+    if (!this.client || !(this.claudeFor.includes(kind) || ["chatter", "roast", "afterCall", "workingLate"].includes(kind))) return this.pick(kind);
     try {
       const messages =
         kind === "reply"

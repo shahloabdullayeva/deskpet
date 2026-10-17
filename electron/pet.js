@@ -283,18 +283,6 @@ window.pet.on("welcome", () => {
   if (!asleep() && !held && !airborne) act("wave");
 });
 window.pet.on("angry", () => model.angry());
-window.pet.on("chase", (dir) => {
-  touched();
-  walking = Boolean(dir);
-  model.setWalking(dir);
-  if (dir) petEl.classList.toggle("left", dir < 0);
-  render();
-});
-window.pet.on("reach", () => model.hop());
-window.pet.on("caught", () => {
-  touched();
-  model.cheer();
-});
 document.documentElement.addEventListener("mouseleave", () => {
   if (!down) setHovered(false);
 });

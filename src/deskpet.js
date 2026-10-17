@@ -35,6 +35,7 @@ class Deskpet {
     this.state = this.readState();
     this.mood = null;
     this.lastChatter = Date.now();
+    this.nextRoast = 0;
     this.feeling = null;
     this.startedAt = Date.now();
     this.override = null;
@@ -262,6 +263,17 @@ class Deskpet {
       const text = `Reminder: ${stripEmoji(reminder.text)}`;
       this.events.emit("say", { text, chime: true, mood: "talk" });
       this.addToChat("pet", text);
+    }
+
+    const roastEvery = (this.config.pet?.chatterMinutes || 0) * 30_000;
+    if (roastEvery && here && this.feeling !== "sleepy" && Date.now() >= this.nextRoast) {
+      const first = !this.nextRoast;
+      this.nextRoast = Date.now() + roastEvery * (0.7 + Math.random() * 0.6);
+      if (!first) {
+        const time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", weekday: "long", timeZone: this.config.timezone || undefined }).formatToParts(new Date());
+        const get = (type) => time.find((part) => part.type === type)?.value || "";
+        await this.say("roast", { memory: this.tools().context(), time: `${get("hour")}:${get("minute")} ${get("dayPeriod")}`, day: get("weekday") });
+      }
     }
 
     const chatter = (this.config.pet?.chatterMinutes || 0) * 60_000;

@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-const CHANNELS = ["say", "mood", "look", "walked", "flash", "visible", "hover", "nap", "feed", "welcome", "angry", "chase", "reach", "caught", "pinned", "call", "cursor", "size", "airborne", "bounce", "landed"];
+const CHANNELS = ["say", "mood", "look", "walked", "flash", "visible", "hover", "nap", "feed", "welcome", "angry", "pinned", "call", "cursor", "size", "airborne", "bounce", "landed"];
 
 contextBridge.exposeInMainWorld("pet", {
   ready: () => ipcRenderer.send("ready"),

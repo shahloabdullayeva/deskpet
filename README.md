@@ -99,12 +99,6 @@ everyone on their own.
 - **Feed her** (right-click → Feed her): tea, a dumpling, fresh herbs, or a suspicious mushroom.
   She eats it in front of you and reacts. She's an apothecary, so the poisonous one is her
   favourite. Feeding her also gets her over being angry. If she's asleep she'll save it for later.
-- **Play with her** (right-click → Play with her): a little herb bundle on a string appears.
-  Drag it around and she runs after it, jumps for it when you hold it over her head, and when it
-  lands near her she bats it across the screen and chases it again. Right-click the toy, or the
-  menu, to put it away; she gets bored after a few minutes of nobody touching it.
-  On Windows she also chases the mouse pointer itself if you wiggle it fast near her, and sulks if
-  you pull it away. (On Linux apps can't see the pointer unless it's over them, so it's the toy.)
 - **Go to sleep / Wake up** (right-click, or just tell her in the chat). Wake her, put her to sleep
   and wake her again within a few minutes and she gets angry: a red anger mark, a stomp, a grumpy
   line, and she refuses to be switched for a few minutes. Food helps.
@@ -122,14 +116,17 @@ everyone on their own.
   bottom of the screen and bounces. Throw her sideways and she can fly onto your other screen.
   When she's pinned she stays exactly where you drop her.
 - **She notices you, barely:** when the mouse is close she glances at it for a second or two,
-  then loses interest for a while. On Windows, wiggling it right next to her can occasionally
-  get her to walk after it, at most once every 10 minutes.
+  then loses interest for a while. She never runs after it.
 - **Change her clothes** (right-click, Change clothes): her servant robe, the Jade Pavilion
   lady-in-waiting outfit with a red flower, the garden party look with the silver hairpin and
   lipstick, the Verdigris House dress-up with gold hairpins, or her apothecary shop apron. She
   spins, says something about it, and remembers what she's wearing.
 - **Attitude:** serious, unimpressed and a little arrogant, like Maomao. She cares, she just
   won't make a fuss about it.
+- **Roasts:** every so often (about twice as often as her casual messages, same setting) she
+  makes a dry remark about you: your posture, your screen-staring, your snacks, your sleep. With a
+  Claude key she writes them fresh, using the time, the day and what she remembers about you.
+  She also has something to say when you throw her, drop her, or make her bigger or smaller.
 - Now and then she walks a few steps, does a little hop where she stands, sniffs her herbs,
   stretches or yawns. She never jumps off to somewhere else on the screen by herself.
 - **Awake whenever you're at the computer**, any day of the week. She dozes off once you've been

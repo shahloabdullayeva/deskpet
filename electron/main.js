@@ -80,8 +80,6 @@ function setStartup(on) {
 }
 
 function stopTimers() {
-  clearInterval(chaseTimer);
-  clearInterval(toyTimer);
   clearTimeout(saveTimer);
   clearInterval(walkTimer);
   clearInterval(fallTimer);
@@ -230,7 +228,6 @@ function pollCursor() {
   if (key !== lastCursor) {
     lastCursor = key;
     send("cursor", { x, y });
-    watchCursorChase(point);
   }
   const now = holding || cursorOverPet(x, y);
   if (now === over) return;
@@ -263,7 +260,6 @@ function keepOnTop() {
   if (!alive(win) || !win.isVisible() || quitting) return;
   if (!win.isAlwaysOnTop()) win.setAlwaysOnTop(true, "screen-saver");
   win.moveTop();
-  if (alive(toyWin)) toyWin.moveTop();
 }
 
 function clampSize(value) {
@@ -279,6 +275,7 @@ function resize(step) {
   size = next;
   win.setBounds({ x: Math.round(x + (oldW - width()) / 2), y: y + oldH - height(), width: width(), height: height() });
   send("size", size);
+  quip(step > 0 ? "bigger" : "smaller", 0.5, 120_000);
   place = { ...place, size };
   savePlace();
 }
@@ -292,6 +289,7 @@ function fall(vx, vy) {
   vx = cap(vx * 16);
   vy = cap(vy * 16);
   let airborne = false;
+  let hardest = 0;
   falling = true;
   fallTimer = setInterval(() => {
     if (!alive(win)) return clearInterval(fallTimer);
@@ -321,6 +319,7 @@ function fall(vx, vy) {
       if (impact > 9) {
         vy = -impact * 0.38;
         vx *= 0.7;
+        hardest = Math.max(hardest, impact);
         send("bounce", impact);
       } else {
         clearInterval(fallTimer);
@@ -328,6 +327,7 @@ function fall(vx, vy) {
         win.setPosition(Math.round(x), Math.round(y));
         savePlace();
         send("landed", airborne ? impact : 0);
+        if (airborne) quip(hardest > 18 ? "thrown" : "dropped", hardest > 18 ? 1 : 0.35, hardest > 18 ? 20_000 : 60_000);
         return;
       }
     }
@@ -440,180 +440,13 @@ function refreshTray() {
   if (tray && !tray.isDestroyed()) tray.setContextMenu(menu());
 }
 
-let toyWin = null;
-let toyHeld = false;
-let toyTimer;
-let toyIdleSince = 0;
-let toyCatches = 0;
-let chase = null;
-let chaseTimer;
-let chaseDir = 0;
-let trail = [];
+const quipped = {};
 
-function toyCenter() {
-  if (!alive(toyWin)) return null;
-  const [x, y] = toyWin.getPosition();
-  return { x: x + 32, y: y + 32 };
-}
-
-function toyPhysics(vx, vy) {
-  clearInterval(toyTimer);
-  let v = { x: vx, y: vy };
-  toyTimer = setInterval(() => {
-    if (!alive(toyWin) || toyHeld) return clearInterval(toyTimer);
-    let [x, y] = toyWin.getPosition();
-    const area = screen.getDisplayNearestPoint({ x: x + 32, y: y + 32 }).workArea;
-    const floor = area.y + area.height - 64;
-    v.y += 1.2;
-    v.x *= 0.99;
-    x += v.x;
-    y += v.y;
-    if (x < area.x || x > area.x + area.width - 64) {
-      x = Math.max(area.x, Math.min(area.x + area.width - 64, x));
-      v.x = -v.x * 0.6;
-    }
-    if (y >= floor) {
-      y = floor;
-      if (v.y > 4) {
-        v.y = -v.y * 0.45;
-        v.x *= 0.8;
-      } else {
-        v.y = 0;
-        v.x *= 0.85;
-        if (Math.abs(v.x) < 0.3) clearInterval(toyTimer);
-      }
-    }
-    toyWin.setPosition(Math.round(x), Math.round(y));
-  }, 16);
-}
-
-function openToy() {
-  if (alive(toyWin)) return toyWin.show();
-  if (!alive(win)) return;
-  const [x, y] = win.getPosition();
-  const area = screen.getDisplayNearestPoint({ x, y }).workArea;
-  const left = x - 180 >= area.x ? x - 180 : x + width() + 120;
-  toyWin = new BrowserWindow({
-    width: 64,
-    height: 64,
-    x: Math.round(Math.min(left, area.x + area.width - 64)),
-    y: area.y + area.height - 64 - 160,
-    transparent: true,
-    frame: false,
-    resizable: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    hasShadow: false,
-    icon: ICON,
-    webPreferences: { preload: path.join(__dirname, "toy-preload.js") },
-  });
-  toyWin.setAlwaysOnTop(true, LINUX ? "screen-saver" : "floating");
-  toyWin.loadFile(path.join(__dirname, "toy.html"));
-  toyWin.once("ready-to-show", () => alive(toyWin) && toyWin.moveTop());
-  toyWin.on("closed", () => {
-    toyWin = null;
-    if (chase && !chase.cursor) stopChase();
-    refreshTray();
-  });
-  toyIdleSince = Date.now();
-  toyCatches = 0;
-  toyPhysics(0, 0);
-  startChase(toyCenter);
-  refreshTray();
-}
-
-function closeToy() {
-  clearInterval(toyTimer);
-  if (alive(toyWin)) toyWin.close();
-}
-
-function startChase(target, { cursor = false } = {}) {
-  clearInterval(walkTimer);
-  chase = { target, cursor, lastJump: 0, lastCatch: 0, lastMove: Date.now() };
-  clearInterval(chaseTimer);
-  chaseTimer = setInterval(chaseStep, 16);
-}
-
-function setChaseDir(dir) {
-  if (dir === chaseDir) return;
-  chaseDir = dir;
-  send("chase", dir);
-}
-
-function stopChase(sulk = false) {
-  clearInterval(chaseTimer);
-  chase = null;
-  setChaseDir(0);
-  if (alive(win)) savePlace();
-  if (sulk) {
-    send("flash", "pout");
-    if (Math.random() < 0.5) pet.line("chaseLost", "pout");
-  }
-}
-
-function chaseStep() {
-  if (!chase || !alive(win)) return stopChase();
+function quip(kind, chance = 1, gap = 90_000) {
   const now = Date.now();
-  if (!chase.cursor && !toyHeld && now - toyIdleSince > 3 * 60_000) {
-    closeToy();
-    return pet.line("toyBored");
-  }
-  if (holding || place.pinned || pet.feeling === "sleepy" || falling) return setChaseDir(0);
-  const point = chase.target();
-  if (!point) return stopChase();
-  const W = width();
-  const H = height();
-  const [x, y] = win.getPosition();
-  const dx = point.x - (x + W / 2);
-  const top = y + H - size;
-  const area = screen.getDisplayNearestPoint({ x: Math.round(x + W / 2), y }).workArea;
-  if (chase.cursor && (Math.abs(dx) > 900 || now - chase.lastMove > 1800)) return stopChase(Math.abs(dx) > 120);
-  if (Math.abs(dx) > 26) {
-    const step = Math.sign(dx) * Math.min(5, Math.abs(dx) / 6 + 1.5);
-    const nx = Math.max(area.x, Math.min(area.x + area.width - W, x + step));
-    win.setPosition(Math.round(nx), y);
-    if (alive(toyWin) && !chase.cursor) toyWin.moveTop();
-    setChaseDir(nx === x ? 0 : Math.sign(dx));
-  } else {
-    setChaseDir(0);
-  }
-  if (Math.abs(dx) < 70 && point.y < top + size * 0.25 && point.y > top - size * 1.3 && now - chase.lastJump > 1100) {
-    chase.lastJump = now;
-    send("reach");
-  }
-  if (!chase.cursor && !toyHeld && Math.abs(dx) < 34 && point.y > y + H - 70 && now - chase.lastCatch > 1500) {
-    chase.lastCatch = now;
-    toyCatches += 1;
-    send("caught");
-    const away = Math.sign(dx || (Math.random() < 0.5 ? -1 : 1));
-    toyPhysics(away * (8 + Math.random() * 7), -12 - Math.random() * 6);
-    if (toyCatches % 3 === 1) pet.line("toyCaught", "happy");
-  }
-}
-
-let nextCursorChase = 0;
-
-function watchCursorChase(point) {
-  if (SHAPED || chase || place.pinned || pet.feeling === "sleepy" || pet.config.pet?.wander === false || !alive(win)) return;
-  const now = Date.now();
-  if (now < nextCursorChase) return;
-  trail = trail.filter((p) => now - p.t < 700).concat({ x: point.x, y: point.y, t: now });
-  const [x, y] = win.getPosition();
-  const near = Math.abs(point.x - (x + width() / 2)) < 200 && point.y > y - 120 && point.y < y + height() + 20;
-  let path = 0;
-  for (let i = 1; i < trail.length; i++) path += Math.hypot(trail[i].x - trail[i - 1].x, trail[i].y - trail[i - 1].y);
-  if (!near || path < 2200) return;
-  trail = [];
-  nextCursorChase = now + 60_000;
-  if (Math.random() < 0.75) return;
-  nextCursorChase = now + 10 * 60_000;
-  let last = point;
-  startChase(() => {
-    const now2 = screen.getCursorScreenPoint();
-    if (Math.hypot(now2.x - last.x, now2.y - last.y) > 3) chase.lastMove = Date.now();
-    last = now2;
-    return now2;
-  }, { cursor: true });
+  if (now < hiddenUntil || pet.feel().feeling === "sleepy" || Math.random() > chance || now - (quipped[kind] || 0) < gap) return;
+  quipped[kind] = now;
+  pet.line(kind, kind === "thrown" ? "pout" : "talk");
 }
 
 function feed(kind) {
@@ -736,7 +569,6 @@ function menu() {
     ...((pet.config.pet?.character || "maomao") === "maomao"
       ? [{ label: "Change clothes", submenu: Object.entries(OUTFITS).map(([name, { label }]) => ({ label, type: "radio", checked: (place.outfit || "servant") === name, click: () => wear(name) })) }]
       : []),
-    alive(toyWin) ? { label: "Put the toy away", click: closeToy } : { label: "Play with her (herb toy)", click: openToy },
     pet.feel().feeling === "sleepy"
       ? { label: "Wake up", click: () => pet.sleepNow(false) }
       : { label: "Go to sleep", click: () => pet.sleepNow(true) },
@@ -827,22 +659,6 @@ app.whenReady().then(() => {
   });
   ipcMain.on("spun", () => pet.touch());
   ipcMain.on("ate", (_event, kind) => pet.fed(String(kind)));
-  ipcMain.on("toy:grab", () => {
-    toyHeld = true;
-    toyIdleSince = Date.now();
-    clearInterval(toyTimer);
-  });
-  ipcMain.on("toy:drag", (_event, { dx, dy }) => {
-    if (!alive(toyWin)) return;
-    toyIdleSince = Date.now();
-    const [x, y] = toyWin.getPosition();
-    toyWin.setPosition(Math.round(x + (Number(dx) || 0)), Math.round(y + (Number(dy) || 0)));
-  });
-  ipcMain.on("toy:drop", () => {
-    toyHeld = false;
-    toyPhysics(0, 0);
-  });
-  ipcMain.on("toy:close", closeToy);
   ipcMain.on("petted", () => {
     pet.touch();
     send("flash", "happy");
