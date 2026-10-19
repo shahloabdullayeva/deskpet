@@ -3,7 +3,7 @@ import { GLTFLoader } from "./vendor/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils } from "../node_modules/@pixiv/three-vrm/lib/three-vrm.module.min.js";
 import { heartTexture, textTexture, angerTexture, spring } from "./pet3d.js";
 
-const HEIGHT = 2.25;
+const HEIGHT = 2.45;
 const FACES = {
   idle: {},
   happy: { happy: 0.85 },
@@ -296,6 +296,7 @@ export function createVrmPet(canvas, { url, onPetted, onFail } = {}) {
     let ay = [0, 0];
     let ex = [0, 0];
     let ey = [0, 0];
+    let ez = [0, 0];
     let lx = [0, 0];
     let kx = [0, 0];
     if (state.walking) {
@@ -321,8 +322,9 @@ export function createVrmPet(canvas, { url, onPetted, onFail } = {}) {
     const fade = action ? Math.max(0, Math.min(1, state.actionAge / 0.35, (state.actionLength - state.actionAge) / 0.35)) : 0;
     const mix = (from, to) => from + (to - from) * fade;
     if (action === "wave") {
-      az[1] = mix(az[1], -0.45);
-      ey[1] = mix(ey[1], 1.1 + Math.sin(t * 11) * 0.35);
+      az[1] = mix(az[1], 0.35);
+      ay[1] = mix(ay[1], 0.35);
+      ez[1] = mix(ez[1], 1.75 + Math.sin(t * 9) * 0.35);
     }
     if (action === "stretch") {
       az = [mix(az[0], -1.3 * bell), mix(az[1], -1.3 * bell)];
@@ -350,8 +352,8 @@ export function createVrmPet(canvas, { url, onPetted, onFail } = {}) {
 
     pose("leftUpperArm", ax[0], ay[0], az[0]);
     pose("rightUpperArm", ax[1], ay[1], -az[1]);
-    pose("leftLowerArm", ex[0], -ey[0], 0);
-    pose("rightLowerArm", ex[1], ey[1], 0);
+    pose("leftLowerArm", ex[0], -ey[0], -ez[0]);
+    pose("rightLowerArm", ex[1], ey[1], ez[1]);
     pose("leftUpperLeg", lx[0], 0, 0);
     pose("rightUpperLeg", lx[1], 0, 0);
     pose("leftLowerLeg", kx[0], 0, 0);

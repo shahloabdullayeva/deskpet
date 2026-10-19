@@ -34,7 +34,7 @@ const PERCH_SECONDS = 30;
 
 protocol.registerSchemesAsPrivileged([{ scheme: "maomao", privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
-const SIZES = { small: 110, medium: 140, large: 190 };
+const SIZES = { small: 140, medium: 180, large: 240 };
 const ICON = path.join(__dirname, "icon.png");
 
 let win;
