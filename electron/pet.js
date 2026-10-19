@@ -1,5 +1,4 @@
 import { createPet } from "./pet3d.js";
-import { createVrmPet } from "./petvrm.js";
 
 const petEl = document.getElementById("pet");
 const bubble = document.getElementById("bubble");
@@ -13,11 +12,32 @@ const ACTIONS = { look: 3, sniff: 3.2, yawn: 2.6, stretch: 2.4, read: 7, grind: 
 const SECONDS = { ...ACTIONS, wave: 2.6, search: 4.5 };
 const LONELY_AFTER = 10 * 60_000;
 
-let impl = start3d();
+const onPetted = () => window.pet.petted();
+let lastLook;
+let impl = waiting();
 const model = new Proxy({}, { get: (_, key) => impl[key] });
+import("./petvrm.js")
+  .then(({ createVrmPet }) => {
+    impl = start3d(createVrmPet);
+    if (lastLook) impl.setLook(lastLook);
+    render();
+  })
+  .catch((error) => {
+    console.warn(`model code failed, using the built-in one: ${error.message}`);
+    impl = fallback3d(onPetted);
+    if (lastLook) impl.setLook(lastLook);
+    render();
+  });
 
-function start3d() {
-  const onPetted = () => window.pet.petted();
+function waiting() {
+  const still = () => {};
+  const flat = { cursor: () => false, partAt: () => null, bounds: () => null };
+  for (const name of ["setFace", "setMouth", "act", "setWalking", "setClimbing", "setHeld", "drag", "setAirborne", "land", "poke", "spin", "jump", "hop", "wonder", "setAsleep", "setPaused", "feed", "angry", "cheer"]) flat[name] = still;
+  flat.setLook = (look) => (lastLook = look);
+  return flat;
+}
+
+function start3d(createVrmPet) {
   try {
     return createVrmPet(sceneEl, {
       url: "models/maomao.vrm",
@@ -29,6 +49,7 @@ function start3d() {
         sceneEl.replaceWith(fresh);
         sceneEl = fresh;
         impl = fallback3d(onPetted);
+        if (lastLook) impl.setLook(lastLook);
         render();
       },
     });

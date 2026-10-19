@@ -12,7 +12,10 @@ app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
 if (LINUX) {
   app.commandLine.appendSwitch("enable-transparent-visuals");
   app.commandLine.appendSwitch("ignore-gpu-blocklist");
-  if (process.env.WAYLAND_DISPLAY && !app.commandLine.hasSwitch("ozone-platform")) {
+  if (process.env.WAYLAND_DISPLAY && process.env.DISPLAY && !process.env.DESKPET_X11) {
+    process.env.DESKPET_X11 = "1";
+    delete process.env.WAYLAND_DISPLAY;
+    process.env.ELECTRON_OZONE_PLATFORM_HINT = "x11";
     app.relaunch({ execPath: process.env.APPIMAGE || process.execPath, args: [...process.argv.slice(1), "--ozone-platform=x11"] });
     app.exit(0);
   }
@@ -86,7 +89,7 @@ function setStartup(on) {
   if (!LINUX) return app.setLoginItemSettings({ openAtLogin: on });
   if (!on) return fs.rmSync(AUTOSTART, { force: true });
   const exec = process.env.APPIMAGE || process.execPath;
-  const args = app.isPackaged ? "" : ` "${app.getAppPath()}"`;
+  const args = `${app.isPackaged ? "" : ` "${app.getAppPath()}"`} --ozone-platform=x11`;
   fs.mkdirSync(path.dirname(AUTOSTART), { recursive: true });
   fs.writeFileSync(AUTOSTART, `[Desktop Entry]\nType=Application\nName=Maomao\nExec="${exec}"${args}\nIcon=maomao\nX-GNOME-Autostart-enabled=true\nTerminal=false\n`);
 }

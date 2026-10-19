@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GLTFLoader } from "../node_modules/three/examples/jsm/loaders/GLTFLoader.js";
+import { GLTFLoader } from "./vendor/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils } from "../node_modules/@pixiv/three-vrm/lib/three-vrm.module.min.js";
 import { heartTexture, textTexture, angerTexture, spring } from "./pet3d.js";
 

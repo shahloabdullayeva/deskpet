@@ -66,7 +66,10 @@
       "category": "Utility",
       "executableName": "maomao",
       "synopsis": "A little 3D desk pet",
-      "maintainer": "Shahlo Abdullayeva <266842396+shahloabdullayeva@users.noreply.github.com>"
+      "maintainer": "Shahlo Abdullayeva <266842396+shahloabdullayeva@users.noreply.github.com>",
+      "executableArgs": [
+        "--ozone-platform=x11"
+      ]
     },
     "appImage": {
       "artifactName": "Maomao.AppImage"
