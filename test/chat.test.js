@@ -3,7 +3,7 @@ const assert = require("node:assert");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { Brain, stripEmoji } = require("../src/brain");
+const { Brain, clean } = require("../src/brain");
 const { Memory } = require("../src/memory");
 
 function fakeClient(turns) {
@@ -14,7 +14,7 @@ function fakeClient(turns) {
   };
 }
 
-test("chat uses the memory and reminder tools, then answers without emojis", async () => {
+test("chat uses the memory and reminder tools, then answers with emojis kept", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "deskpet-"));
   const memory = new Memory(dir, "Asia/Tashkent");
   const brain = new Brain({ config: { me: "", him: "Ali", petName: "Maomao", brain: {} }, phrases: {}, style: "", env: {} });
@@ -39,12 +39,12 @@ test("chat uses the memory and reminder tools, then answers without emojis", asy
 
   const reply = await brain.chat([{ role: "him", text: "I love matcha, remind me to stretch in 20 min" }], tools);
 
-  assert.strictEqual(reply.text, "noted, and I'll remind you in 20 min");
+  assert.strictEqual(reply.text, "noted, and I'll remind you in 20 min 💕");
   assert.deepStrictEqual(memory.memories.map((m) => m.text), ["Likes matcha"]);
   assert.deepStrictEqual(memory.reminders.map((r) => r.text), ["time to stretch"]);
   const second = brain.client.calls[1];
   assert.deepStrictEqual(second.messages.at(-1).content.map((r) => r.tool_use_id), ["t1", "t2"]);
-  assert.match(second.system[0].text, /Never use emojis/);
+  assert.match(second.system[0].text, /never more than one per message/);
   assert.strictEqual(second.system[1].text, "Right now it is Friday.");
 });
 
@@ -58,5 +58,5 @@ test("replies wrapped in answer tags show only the message", async () => {
   brain.client = fakeClient([{ stop_reason: "end_turn", content: [{ type: "text", text: "<answer>\neat something </answer>" }] }]);
   const reply = await brain.chat([{ role: "him", text: "hi" }], { context: () => "", run: () => "" });
   assert.strictEqual(reply.text, "eat something");
-  assert.strictEqual(stripEmoji("<thinking>he is tired</thinking>i <3 tea"), "i <3 tea");
+  assert.strictEqual(clean("<thinking>he is tired</thinking>i <3 tea"), "i <3 tea");
 });

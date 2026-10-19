@@ -4,7 +4,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { Memory, zonedToEpoch } = require("../src/memory");
-const { stripEmoji, toMessages } = require("../src/brain");
+const { clean, toMessages } = require("../src/brain");
 
 test("local times in his time zone become the right moment", () => {
   assert.strictEqual(new Date(zonedToEpoch("2026-10-17 15:00", "Asia/Tashkent")).toISOString(), "2026-10-17T10:00:00.000Z");
@@ -28,10 +28,20 @@ test("remembers, forgets, and hands out reminders once when due", () => {
   assert.strictEqual(reloaded.reminders.length, 1);
 });
 
-test("strips emojis but keeps the words", () => {
-  assert.strictEqual(stripEmoji("hiii 🥺 how's work 💕💕"), "hiii how's work");
-  assert.strictEqual(stripEmoji("good job 👍🏽!"), "good job!");
-  assert.strictEqual(stripEmoji("no emoji here"), "no emoji here");
+test("keeps emojis and words, drops answer tags", () => {
+  assert.strictEqual(clean("hiii 🥺 how's work 💕💕"), "hiii 🥺 how's work 💕💕");
+  assert.strictEqual(clean("<answer>good job 👍🏽</answer>"), "good job 👍🏽");
+  assert.strictEqual(clean("no emoji here"), "no emoji here");
+});
+
+test("attached pictures and text files reach Claude as content blocks", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "deskpet-files-"));
+  fs.writeFileSync(path.join(dir, "1-0-a.png"), Buffer.from("png"));
+  fs.writeFileSync(path.join(dir, "1-1-n.txt"), "notes");
+  const [message] = toMessages([{ role: "him", text: "look", files: [{ name: "a.png", type: "image/png", file: "1-0-a.png" }, { name: "n.txt", type: "text/plain", file: "1-1-n.txt" }] }], "Me", dir);
+  assert.deepStrictEqual(message.content.map((block) => block.type), ["image", "text", "text"]);
+  assert.strictEqual(message.content[0].source.data, Buffer.from("png").toString("base64"));
+  assert.match(message.content[1].text, /notes/);
 });
 
 test("chat history turns into alternating turns starting with him", () => {
@@ -47,8 +57,8 @@ test("chat history turns into alternating turns starting with him", () => {
     "Me"
   );
   assert.deepStrictEqual(messages, [
-    { role: "user", content: "hey\nbusy day" },
-    { role: "assistant", content: "[from Me] love you\neat lunch" },
-    { role: "user", content: "ok" },
+    { role: "user", content: [{ type: "text", text: "hey" }, { type: "text", text: "busy day" }] },
+    { role: "assistant", content: [{ type: "text", text: "[from Me] love you" }, { type: "text", text: "eat lunch" }] },
+    { role: "user", content: [{ type: "text", text: "ok" }] },
   ]);
 });
