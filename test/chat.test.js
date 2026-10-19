@@ -44,7 +44,7 @@ test("chat uses the memory and reminder tools, then answers with emojis kept", a
   assert.deepStrictEqual(memory.reminders.map((r) => r.text), ["time to stretch"]);
   const second = brain.client.calls[1];
   assert.deepStrictEqual(second.messages.at(-1).content.map((r) => r.tool_use_id), ["t1", "t2"]);
-  assert.match(second.system[0].text, /never more than one per message/);
+  assert.match(second.system[0].text, /Almost never use emojis/);
   assert.strictEqual(second.system[1].text, "Right now it is Friday.");
 });
 

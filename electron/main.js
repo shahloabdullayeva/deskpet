@@ -393,17 +393,43 @@ function stroll(x, done) {
 
 function climb(y, done) {
   clearInterval(climbTimer);
-  send("airborne");
+  const [, from] = win.getPosition();
+  if (Math.abs(y - from) < 4) return done();
+  send("climb", true);
+  let tick = 0;
   climbTimer = setInterval(() => {
-    if (!alive(win) || holding || falling) return clearInterval(climbTimer);
+    if (!alive(win) || holding || falling) {
+      send("climb", false);
+      return clearInterval(climbTimer);
+    }
     const [x, now] = win.getPosition();
-    const step = Math.sign(y - now) * Math.min(6, Math.abs(y - now));
-    if (Math.abs(y - now) <= 1) {
+    tick += 1;
+    const pace = 1.5 + Math.abs(Math.sin(tick * 0.115)) * 4;
+    if (Math.abs(y - now) <= pace) {
       clearInterval(climbTimer);
-      send("landed", 0);
+      win.setPosition(x, y);
+      send("climb", false);
       return done();
     }
-    win.setPosition(x, now + step);
+    win.setPosition(x, Math.round(now + Math.sign(y - now) * pace));
+  }, 16);
+}
+
+function hopAcross(xs, done) {
+  if (!xs.length || !alive(win) || holding || falling) return done();
+  const [from, y] = win.getPosition();
+  const to = xs[0];
+  send("hop");
+  let frame = 0;
+  const frames = 22;
+  const timer = setInterval(() => {
+    if (!alive(win) || holding || falling) return clearInterval(timer);
+    frame += 1;
+    win.setPosition(Math.round(from + ((to - from) * frame) / frames), y);
+    if (frame >= frames) {
+      clearInterval(timer);
+      setTimeout(() => hopAcross(xs.slice(1), done), 450);
+    }
   }, 16);
 }
 
@@ -425,15 +451,19 @@ async function peek(force = false) {
     const seen = await pet.brain.look(source.thumbnail.toJPEG(70));
     if (!seen || !alive(win)) return;
     if (place.pinned || seen.x === null || seen.y === null) return pet.announce(seen.text);
-    const x = Math.round(Math.max(workArea.x, Math.min(workArea.x + workArea.width - W, bounds.x + seen.x * bounds.width - W / 2)));
+    const toX = (fraction) => Math.round(Math.max(workArea.x, Math.min(workArea.x + workArea.width - W, bounds.x + fraction * bounds.width - W / 2)));
     const y = Math.round(Math.max(workArea.y - H * 0.3, Math.min(workArea.y + workArea.height - H, bounds.y + seen.y * bounds.height - H + 8)));
-    stroll(x, () =>
-      climb(y, () => {
-        pet.announce(seen.text);
-        clearTimeout(perchTimer);
-        perchTimer = setTimeout(() => !holding && !falling && fall(0, 0), PERCH_SECONDS * 1000);
-      })
-    );
+    const perch = () => {
+      pet.announce(seen.text);
+      clearTimeout(perchTimer);
+      perchTimer = setTimeout(() => !holding && !falling && fall(0, 0), PERCH_SECONDS * 1000);
+    };
+    const there = () => {
+      if (seen.move === "walk") return stroll(toX(seen.toX), () => (send("point"), setTimeout(perch, 300)));
+      if (seen.move === "tabs") return hopAcross(seen.tabs.slice(1).map(toX), perch);
+      perch();
+    };
+    stroll(toX(seen.x), () => climb(y, there));
   } catch (error) {
     console.warn(`[peek] ${error.message}`);
   } finally {
@@ -583,6 +613,7 @@ function startUpdates() {
   const tell = (text) => send("say", { text, mood: "talk", chime: false });
   autoUpdater.on("error", (error) => {
     console.warn(`[update] ${error.message}`);
+    send("updating", null);
     updateStatus = "";
     refreshTray();
     if (manual) tell(`couldn't get the update: ${String(error.message).split("\n")[0].slice(0, 120)}`);
@@ -595,11 +626,13 @@ function startUpdates() {
   autoUpdater.on("update-available", (info) => {
     updateStatus = `Downloading ${info.version}…`;
     refreshTray();
+    send("updating", 0);
     if (manual) tell(`found ${info.version}, downloading it now. give me a minute`);
   });
   autoUpdater.on("download-progress", (progress) => {
     const label = `Downloading update… ${Math.round(progress.percent)}%`;
     if (label === updateStatus) return;
+    send("updating", progress.percent);
     updateStatus = label;
     refreshTray();
   });
@@ -607,6 +640,7 @@ function startUpdates() {
     updateReady = true;
     updateStatus = "";
     refreshTray();
+    send("updating", 100);
     if (manual) tell(`${info.version} is ready. right-click me and pick restart to update`);
     manual = false;
     const install = setInterval(() => {
@@ -748,6 +782,15 @@ app.whenReady().then(() => {
     send("mood", pet.mood || "idle");
     send("pinned", Boolean(place.pinned));
     if (pet.isExample) setTimeout(openSettings, 800);
+    if (app.isPackaged && place.version !== app.getVersion() && (place.version || Number.isFinite(place.x))) {
+      setTimeout(() => pet.announce(`i got an update. you can send me pictures and files in chat now, and if you switch it on in settings i'll climb around your screen and look at what you're doing`), 6000);
+    }
+    if (place.version !== app.getVersion()) {
+      place = { ...place, version: app.getVersion() };
+      try {
+        fs.writeFileSync(PLACE, JSON.stringify(place));
+      } catch {}
+    }
   });
   ipcMain.on("tap", () => {
     pet.touch();

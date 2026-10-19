@@ -4,7 +4,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { Memory, zonedToEpoch } = require("../src/memory");
-const { clean, toMessages } = require("../src/brain");
+const { clean, tame, toMessages } = require("../src/brain");
 
 test("local times in his time zone become the right moment", () => {
   assert.strictEqual(new Date(zonedToEpoch("2026-10-17 15:00", "Asia/Tashkent")).toISOString(), "2026-10-17T10:00:00.000Z");
@@ -61,4 +61,11 @@ test("chat history turns into alternating turns starting with him", () => {
     { role: "assistant", content: [{ type: "text", text: "[from Me] love you" }, { type: "text", text: "eat lunch" }] },
     { role: "user", content: [{ type: "text", text: "ok" }] },
   ]);
+});
+
+test("her lines keep at most one emoji and no hand emojis unless she's mad", () => {
+  assert.strictEqual(tame("fine 😂😂 🔥"), "fine 😂");
+  assert.strictEqual(tame("ok 👍🏽"), "ok");
+  assert.strictEqual(tame("ok 🙏 😤"), "ok 😤");
+  assert.strictEqual(tame("no 👍", true), "no 👍");
 });

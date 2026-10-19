@@ -2,7 +2,7 @@ import * as THREE from "../node_modules/three/build/three.module.min.js";
 
 const PALETTES = {
   maomao: {
-    hair: "#26332f", hairShine: "#55736a", eyes: "#3e8a7c", eyesLight: "#a6dcc8", skin: "#f8e6da", outfit: "#a9caa2", outfitDark: "#7ea582",
+    hair: "#26332f", hairShine: "#55736a", eyes: "#3e8a7c", eyesLight: "#a6dcc8", skin: "#f5dccb", outfit: "#a9caa2", outfitDark: "#7ea582",
     collar: "#f5f2e8", cuff: "#557d66", skirt: "#3f6152", ribbon: "#d8e6cf", ink: "#1e2624", shoe: "#3b2f2a", blush: "#f59aa8",
   },
   catgirl: {
@@ -44,8 +44,8 @@ function chin(geometry, radius) {
   return geometry;
 }
 
-function toonRamp() {
-  const texture = new THREE.DataTexture(new Uint8Array([120, 120, 120, 255, 205, 205, 205, 255, 255, 255, 255, 255]), 3, 1);
+function toonRamp(levels = [120, 205, 255]) {
+  const texture = new THREE.DataTexture(new Uint8Array(levels.flatMap((level) => [level, level, level, 255])), 3, 1);
   texture.minFilter = THREE.NearestFilter;
   texture.magFilter = THREE.NearestFilter;
   texture.needsUpdate = true;
@@ -201,7 +201,8 @@ export function createPet(canvas, { onPetted } = {}) {
   scene.add(rim);
 
   const ramp = toonRamp();
-  const shade = (color, _key, { metalness, roughness, ...extra } = {}) => new THREE.MeshToonMaterial({ color, gradientMap: ramp, ...extra });
+  const softRamp = toonRamp([222, 244, 255]);
+  const shade = (color, key, { metalness, roughness, ...extra } = {}) => new THREE.MeshToonMaterial({ color, gradientMap: key === "skin" ? softRamp : ramp, ...extra });
   const palette = { ...PALETTES.maomao };
   const mats = {};
   for (const key of ["hair", "skin", "outfit", "outfitDark", "collar", "cuff", "skirt", "ribbon", "shoe"]) {
@@ -360,6 +361,7 @@ export function createPet(canvas, { onPetted } = {}) {
     search: (side) => (side === 1 ? { ax: -2.0, az: 0.35, ex: -2.0, ez: 0.9 } : null),
     read: () => ({ ax: -0.75, az: 0.18, ex: -1.25, ez: 0.45 }),
     grind: (side, t) => (side === -1 ? { ax: -0.55, az: 0.12, ex: -1.25, ez: 0.6 } : { ax: -0.75 + Math.sin(t * 7) * 0.12, az: 0.15 + Math.cos(t * 7) * 0.1, ex: -1.35, ez: 0.75 }),
+    point: (side) => (side === 1 ? { ax: -1.35, az: 0.35, ex: -0.15, ez: 0.1 } : { ax: -0.1, az: 0.15, ex: -0.9, ez: 0.5 }),
     eat: (side, t, reach) => (side === 1 ? { ax: -0.4 - 1.1 * reach, az: 0.2, ex: -1.4 - 0.4 * reach, ez: 0.9 } : null),
   };
   const reachOf = (p) => (p < 0.25 ? p / 0.25 : p < 0.8 ? 1 : Math.max(0, (1 - p) / 0.2));
@@ -473,6 +475,7 @@ export function createPet(canvas, { onPetted } = {}) {
     actionAge: 0,
     actionLength: 0,
     walking: 0,
+    climbing: false,
     held: false,
     airborne: false,
     surprise: 0,
@@ -721,12 +724,16 @@ export function createPet(canvas, { onPetted } = {}) {
     }
     ctx.globalAlpha = 1;
     if (state.character === "maomao") {
-      ctx.fillStyle = "#c08a70";
-      for (const [x, y] of [[-30, 256], [-20, 264], [-10, 258], [10, 258], [20, 264], [30, 256], [-40, 264], [40, 264]]) {
-        ctx.beginPath();
-        ctx.arc(FACE_W / 2 + x, y, 2.6, 0, Math.PI * 2);
-        ctx.fill();
+      ctx.fillStyle = "#d4a08a";
+      ctx.globalAlpha = 0.7;
+      for (const side of [-1, 1]) {
+        for (const [x, y] of [[66, 246], [80, 240], [94, 247], [76, 254]]) {
+          ctx.beginPath();
+          ctx.arc(FACE_W / 2 + side * x, y, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
+      ctx.globalAlpha = 1;
     }
     for (const [cx, side] of [[left, -1], [right, 1]]) {
       if (eyes === "open" || eyes === "wide") {
@@ -889,7 +896,7 @@ export function createPet(canvas, { onPetted } = {}) {
     state.gaze[0] += (state.gazeTarget[0] - state.gaze[0]) * Math.min(1, dt * 12);
     state.gaze[1] += (state.gazeTarget[1] - state.gaze[1]) * Math.min(1, dt * 12);
 
-    const facingTarget = state.walking ? state.walking * 1.05 : (0.15 + state.yaw * 0.25) * (1 - lie);
+    const facingTarget = state.climbing ? Math.PI : state.walking ? state.walking * 1.05 : (0.15 + state.yaw * 0.25) * (1 - lie);
     [state.facing, state.facingV] = spring(state.facing, facingTarget, state.facingV, 30, 8, dt);
     root.rotation.y = state.facing;
 
@@ -926,9 +933,12 @@ export function createPet(canvas, { onPetted } = {}) {
       bob = Math.abs(stride) * 0.025;
       wobble = stride * 0.025;
     }
+    const pull = Math.sin(t * 7);
+    if (state.climbing) bob = Math.abs(pull) * 0.04;
     for (const [i, leg] of legs.entries()) {
       const side = i ? -1 : 1;
-      if (state.walking) leg.rotation.x = stride * 0.42 * side;
+      if (state.climbing) leg.rotation.x = Math.sin(t * 7 + i * Math.PI) * 0.55 - 0.35;
+      else if (state.walking) leg.rotation.x = stride * 0.42 * side;
       else if (kick) leg.rotation.x = Math.sin(t * 9 + i * Math.PI) * 0.5 - 0.2;
       else leg.rotation.x = 0;
       leg.position.y = 0.62 + (state.walking ? Math.max(0, stride * side) * 0.025 : 0);
@@ -946,6 +956,13 @@ export function createPet(canvas, { onPetted } = {}) {
       const tucked = state.walking ? 0.4 : 1;
       elbow.rotation.x = -1.05 * tucked * (1 - lifted);
       elbow.rotation.z = -side * 0.55 * tucked * (1 - lifted);
+      if (state.climbing) {
+        const reachUp = Math.sin(t * 7 + i * Math.PI);
+        arm.rotation.z = side * (2.45 + reachUp * 0.3);
+        arm.rotation.x = -0.35;
+        elbow.rotation.x = 0;
+        elbow.rotation.z = -side * (0.25 + Math.max(0, -reachUp) * 0.9);
+      }
     }
 
     const fade = action ? Math.max(0, Math.min(1, state.actionAge / 0.35, (state.actionLength - state.actionAge) / 0.35)) : 0;
@@ -1126,6 +1143,9 @@ export function createPet(canvas, { onPetted } = {}) {
       if (state.hopY > 0) return;
       state.hopV = 2.2;
       state.hopY = 0.001;
+    },
+    setClimbing(on) {
+      state.climbing = Boolean(on);
     },
     hop() {
       if (state.hopY > 0 || state.asleep) return;

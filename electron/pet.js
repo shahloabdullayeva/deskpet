@@ -3,6 +3,7 @@ import { createPet } from "./pet3d.js";
 const petEl = document.getElementById("pet");
 const bubble = document.getElementById("bubble");
 const badge = document.getElementById("badge");
+const progress = document.getElementById("progress");
 const art = document.getElementById("art");
 const sceneEl = document.getElementById("scene");
 const rootEl = document.documentElement;
@@ -20,7 +21,7 @@ function start3d() {
     console.warn(`3D failed, showing her picture instead: ${error.message}`);
     const still = () => {};
     const flat = { cursor: () => false, partAt: () => null, bounds: () => null };
-    for (const name of ["setLook", "setFace", "setMouth", "act", "setWalking", "setHeld", "drag", "setAirborne", "land", "poke", "spin", "jump", "hop", "wonder", "setAsleep", "setPaused", "feed", "angry", "cheer"]) flat[name] = still;
+    for (const name of ["setLook", "setFace", "setMouth", "act", "setWalking", "setClimbing", "setHeld", "drag", "setAirborne", "land", "poke", "spin", "jump", "hop", "wonder", "setAsleep", "setPaused", "feed", "angry", "cheer"]) flat[name] = still;
     flat.flat = true;
     return flat;
   }
@@ -182,6 +183,7 @@ function reportShape() {
   }
   if (!bubble.hidden) rects.push(box(bubble, 2));
   if (!badge.hidden) rects.push(box(badge, 2));
+  if (!progress.hidden) rects.push(box(progress, 2));
   const key = JSON.stringify(rects);
   if (key === lastShape) return;
   lastShape = key;
@@ -328,6 +330,18 @@ window.pet.on("walked", (where) => {
   }
   render();
 });
+window.pet.on("updating", (percent) => {
+  progress.hidden = percent === null || percent === undefined;
+  if (progress.hidden) return;
+  document.getElementById("progress-text").textContent = percent >= 100 ? "update ready" : `updating ${Math.round(percent)}%`;
+  document.getElementById("progress-bar").style.width = `${Math.max(0, Math.min(100, percent))}%`;
+});
+window.pet.on("climb", (on) => {
+  model.setClimbing(on);
+  rootEl.classList.toggle("flying", Boolean(on));
+});
+window.pet.on("hop", () => model.hop());
+window.pet.on("point", () => act("point"));
 window.pet.on("stroll", (dx) => {
   if (!dx) return;
   walking = true;

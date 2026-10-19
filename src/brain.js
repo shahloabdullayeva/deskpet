@@ -175,9 +175,13 @@ class Brain {
     const prompt = [
       `This is a screenshot of ${user}'s screen right now. A small anime girl (that's you) and your chat window may be in it: ignore them.`,
       `Pick ONE thing on the screen to react to: what they're working on, something written in a spreadsheet or document, a browser tab title, a video, a song, or if it's just the desktop, the wallpaper. Ask about it or comment on it in your voice, one or two short sentences, specific to what you actually see.`,
-      `Then pick where you'll go sit: a spot right on top of that thing (the top edge of a line of text, a cell, a tab, a window's title bar), as fractions of the screenshot's width (x) and height (y), 0 to 1.`,
+      `Then decide how you'll go there. All positions are fractions of the screenshot's width (x) and height (y), 0 to 1, and y is always the TOP edge of what you stand on.`,
+      `- "sit": climb up and sit on the thing at x, y (a cell, a picture, a window's title bar).`,
+      `- "walk": it's a line or row of text. x, y is the left end of that line; to_x is the word or number you're talking about. You climb up, walk along the line and point at it.`,
+      `- "tabs": you're commenting on their browser or editor tabs. y is the top of the tab strip and tabs lists the x centre of each tab from left to right (at most 8). You hop across them.`,
+      `Pick whichever fits what you're commenting on; when it's just the desktop, sit on something in the wallpaper.`,
       `If the screen shows anything private (passwords, bank or card details, private messages, medical or HR records, someone's personal data), don't mention or describe it at all and set "private" to true.`,
-      `Reply with JSON only: {"say": "...", "x": 0.5, "y": 0.5, "private": false}`,
+      `Reply with JSON only: {"say": "...", "move": "sit" | "walk" | "tabs", "x": 0.5, "y": 0.5, "to_x": 0.7, "tabs": [0.1, 0.2], "private": false}`,
     ].join("\n");
     try {
       const response = await this.client.beta.messages.create({
@@ -193,7 +197,9 @@ class Brain {
       const found = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1));
       if (found.private || !found.say) return null;
       const fraction = (value) => (Number.isFinite(Number(value)) ? Math.max(0, Math.min(1, Number(value))) : null);
-      return { text: clean(found.say), x: fraction(found.x), y: fraction(found.y) };
+      const tabs = Array.isArray(found.tabs) ? found.tabs.map(fraction).filter((x) => x !== null).slice(0, 8) : [];
+      const move = found.move === "walk" && fraction(found.to_x) !== null ? "walk" : found.move === "tabs" && tabs.length > 1 ? "tabs" : "sit";
+      return { text: clean(found.say), move, x: move === "tabs" ? tabs[0] : fraction(found.x), y: fraction(found.y), toX: fraction(found.to_x), tabs };
     } catch (error) {
       this.log("look", error);
       return null;
@@ -247,7 +253,7 @@ class Brain {
       this.knows.trim() ? `\nThings you already know:\n${this.knows.trim()}` : ``,
       ``,
       `Never bring up the day of the week, the date, the time, or how someone is sitting (no "it's sunday", no "it's 3pm", no posture comments). Only mention time if they ask, or when setting or confirming a reminder.`,
-      `Rules: write like a text message, usually 1-3 short sentences. An emoji now and then is fine when it fits, never more than one per message. When they send a picture or file, look at it and react to what is actually in it. Reply with just the message as plain text, never wrapped in tags like <answer>.`,
+      `Rules: write like a text message, usually 1-3 short sentences. Almost never use emojis: most messages have none, at most one in a message, and never hand emojis (thumbs up, praying hands, clapping, waving and so on) unless you're angry. When they send a picture or file, look at it and react to what is actually in it. Reply with just the message as plain text, never wrapped in tags like <answer>.`,
       `If ${user} asks for help or a question, actually help like a capable assistant, still in your voice and as brief as the answer allows.`,
       `Care shows in small dry ways, never sappy, never guilt-tripping or controlling. Never cutesy or bubbly.`,
       `If ${user} mentions a song, a show or something they're watching, react like a friend would: if it sounds sad or heartbroken, gently check in on how they're feeling; if it's a love song, tease them a little and ask about the person they're thinking of.`,
@@ -312,6 +318,18 @@ const TOOLS = [
 const TAGS = /<\/?(?:answer|response|reply|message|output|text|final|result)\b[^>]*>/gi;
 const HIDDEN = /<(thinking|reasoning|scratchpad|analysis)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi;
 
+const EMOJI = /\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})*(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})*)*|[\u{1F1E6}-\u{1F1FF}]{2}/gu;
+const HANDS = /^[\u261D\u270A-\u270D\u{1F446}-\u{1F450}\u{1F485}\u{1F4AA}\u{1F590}-\u{1F596}\u{1F64C}\u{1F64F}\u{1F918}-\u{1F91F}\u{1F932}\u{1FAF0}-\u{1FAF8}]/u;
+
+function tame(text, mad = false) {
+  let kept = 0;
+  return String(text)
+    .replace(EMOJI, (emoji) => (kept || (HANDS.test(emoji) && !mad) ? "" : (kept++, emoji)))
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ +([,.!?])/g, "$1")
+    .trim();
+}
+
 function clean(text) {
   return String(text).replace(HIDDEN, "").replace(TAGS, "").replace(/[ \t]{2,}/g, " ").replace(/ +([,.!?])/g, "$1").trim();
 }
@@ -361,4 +379,4 @@ function toMessages(history, me, dir) {
   return messages;
 }
 
-module.exports = { Brain, toMessages, clean };
+module.exports = { Brain, toMessages, clean, tame };

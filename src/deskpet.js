@@ -4,7 +4,7 @@ const { EventEmitter } = require("events");
 
 const { load } = require("./config");
 const { localParts, isWorkTime, isDue, toMinutes } = require("./clock");
-const { Brain, clean } = require("./brain");
+const { Brain, clean, tame } = require("./brain");
 const { Memory } = require("./memory");
 
 const FACES = { sleepy: "sleepy", lonely: "pout", happy: "happy", calm: "idle", annoyed: "pout" };
@@ -47,8 +47,12 @@ class Deskpet {
     this.annoyedUntil = 0;
   }
 
+  voice(text) {
+    return tame(clean(text), Date.now() < this.annoyedUntil);
+  }
+
   line(kind, mood = "talk") {
-    const text = clean(this.brain.pick(kind).text);
+    const text = this.voice(this.brain.pick(kind).text);
     this.events.emit("say", { text, chime: false, mood });
     return text;
   }
@@ -154,7 +158,7 @@ class Deskpet {
   }
 
   addToChat(role, text, files) {
-    const entry = { role, text: clean(text), at: Date.now(), ...(files?.length ? { files } : {}) };
+    const entry = { role, text: role === "pet" ? this.voice(text) : clean(text), at: Date.now(), ...(files?.length ? { files } : {}) };
     this.desk = [...this.desk, entry].slice(-300);
     fs.mkdirSync(path.dirname(this.chatPath), { recursive: true });
     fs.writeFileSync(this.chatPath, JSON.stringify(this.desk));
@@ -237,14 +241,14 @@ class Deskpet {
 
   async say(kind, context = {}, { chime = true } = {}) {
     const line = await this.brain.write(kind, context);
-    const text = clean(line.text);
+    const text = this.voice(line.text);
     this.events.emit("say", { text, chime, mood: MOODS[kind] || "talk" });
     if (kind !== "tap") this.addToChat("pet", text);
     return { ...line, text };
   }
 
   announce(text, mood = "talk") {
-    const line = clean(text);
+    const line = this.voice(text);
     this.events.emit("say", { text: line, chime: false, mood });
     this.addToChat("pet", line);
   }
@@ -294,7 +298,7 @@ class Deskpet {
     }
 
     for (const reminder of this.memory.due()) {
-      const text = `Reminder: ${clean(reminder.text)}`;
+      const text = `Reminder: ${this.voice(reminder.text)}`;
       this.events.emit("say", { text, chime: true, mood: "talk" });
       this.addToChat("pet", text);
     }
