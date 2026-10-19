@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const Anthropic = require("@anthropic-ai/sdk");
 
 const TASKS = {
@@ -67,7 +69,7 @@ const FALLBACK = {
 };
 
 class Brain {
-  constructor({ config, phrases, examples = [], style, env }) {
+  constructor({ config, phrases, examples = [], style, env, dataDir }) {
     this.config = config;
     this.examples = examples;
     this.phrases = phrases;
@@ -75,6 +77,30 @@ class Brain {
     this.claudeFor = config.brain?.useClaudeFor || [];
     this.client = env.anthropicKey ? new Anthropic({ apiKey: env.anthropicKey }) : null;
     this.last = {};
+    this.logFile = dataDir ? path.join(dataDir, "brain.log") : null;
+  }
+
+  reason(error) {
+    const status = error?.status;
+    const detail = String(error?.error?.error?.message || error?.message || "");
+    if (error instanceof Anthropic.APIConnectionError || !status) return "can't reach the internet";
+    if (status === 401) return "the claude key was rejected, check settings";
+    if (status === 403) return "the claude key isn't allowed to do this";
+    if (/credit balance/i.test(detail)) return "the claude account is out of credit";
+    if (status === 429) return "too many messages, rate limited";
+    if (status === 529 || status >= 500) return "claude is down or overloaded";
+    return `claude said: ${detail.slice(0, 120)}`;
+  }
+
+  log(where, error) {
+    const reason = this.reason(error);
+    console.warn(`[brain] ${where} failed: ${error?.message}`);
+    if (!this.logFile) return reason;
+    try {
+      fs.mkdirSync(path.dirname(this.logFile), { recursive: true });
+      fs.appendFileSync(this.logFile, `${new Date().toISOString()} ${where} ${error?.status || "-"} ${reason} | ${error?.message}\n`);
+    } catch {}
+    return reason;
   }
 
   pick(kind) {
@@ -96,7 +122,7 @@ class Brain {
       const text = await this.ask(messages);
       return text ? { text } : this.pick(kind);
     } catch (error) {
-      console.warn(`[brain] Claude failed, using your phrases: ${error.message}`);
+      this.log(kind, error);
       return this.pick(kind);
     }
   }
@@ -133,8 +159,7 @@ class Brain {
       }
       return { text: "okay, done" };
     } catch (error) {
-      console.warn(`[brain] chat failed: ${error.message}`);
-      return { text: "my brain isn't connecting right now, try again in a bit?", offline: true };
+      return { text: `my brain isn't connecting: ${this.log("chat", error)}`, offline: true };
     }
   }
 
