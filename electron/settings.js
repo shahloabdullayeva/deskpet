@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const CHECKINS = { morning: "Good morning", howsYourDay: "How's your day", lunch: "Lunch reminder", water: "Drink water", goodbye: "Home time" };
-const FIELDS = ["name", "petName", "character", "size", "chatterMinutes", "anthropicKey", "talksLike", "style", "start", "end", "timezone"];
+const FIELDS = ["name", "petName", "character", "size", "chatterMinutes", "anthropicKey", "talksLike", "style", "knows", "meTimezone", "start", "end", "timezone"];
 let form;
 
 function fill(values) {
@@ -9,6 +9,9 @@ function fill(values) {
   for (const id of FIELDS) $(id).value = values[id] || "";
   $("sound").checked = values.sound;
   $("wander").checked = values.wander;
+  $("breaks").checked = values.breaks;
+  $("health").checked = values.health;
+  $("peek").checked = values.peek;
 
   $("days").textContent = "";
   for (const [index, day] of DAYS.entries()) {
@@ -38,6 +41,9 @@ function collect() {
   for (const id of FIELDS) values[id] = $(id).value;
   values.sound = $("sound").checked;
   values.wander = $("wander").checked;
+  values.breaks = $("breaks").checked;
+  values.health = $("health").checked;
+  values.peek = $("peek").checked;
   values.days = [...$("days").querySelectorAll("input:checked")].map((box) => Number(box.value));
   values.checkins = {};
   for (const kind of Object.keys(CHECKINS)) {

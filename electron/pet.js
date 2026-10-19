@@ -328,6 +328,13 @@ window.pet.on("walked", (where) => {
   }
   render();
 });
+window.pet.on("stroll", (dx) => {
+  if (!dx) return;
+  walking = true;
+  model.setWalking(Math.sign(dx));
+  petEl.classList.toggle("left", dx < 0);
+  render();
+});
 window.pet.on("nap", (dx) => {
   if (!dx) return;
   walking = true;

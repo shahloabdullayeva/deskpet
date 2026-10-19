@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
-const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, powerMonitor, screen } = require("electron");
+const { pathToFileURL } = require("url");
+const { app, BrowserWindow, Menu, Tray, desktopCapturer, ipcMain, nativeImage, net, powerMonitor, protocol, screen, shell } = require("electron");
 
 const LINUX = process.platform === "linux";
 const SHAPED = LINUX;
@@ -24,6 +25,12 @@ process.env.DESKPET_DATA ||= path.join(app.getPath("userData"), "data");
 const { Deskpet } = require("../src/deskpet");
 const settings = require("../src/settings");
 
+const MAX_UPLOAD = 25_000_000;
+const PEEK_EVERY = [20, 35];
+const PERCH_SECONDS = 30;
+
+protocol.registerSchemesAsPrivileged([{ scheme: "maomao", privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
+
 const SIZES = { small: 110, medium: 140, large: 190 };
 const ICON = path.join(__dirname, "icon.png");
 
@@ -38,6 +45,11 @@ let callStarted = 0;
 let fallTimer;
 let falling = false;
 let size = 140;
+let nextPeek = 0;
+let peekPausedUntil = 0;
+let peeking = false;
+let perchTimer;
+let climbTimer;
 let quitting = false;
 
 const PLACE = path.join(app.getPath("userData"), "place.json");
@@ -360,6 +372,75 @@ function walk(dx, done = {}) {
   }, 16);
 }
 
+function canPeek() {
+  return pet.config.pet?.peek === true && Date.now() >= peekPausedUntil && Date.now() >= hiddenUntil && !callStarted && !peeking && !falling && !holding && alive(win) && win.isVisible() && pet.brain.client && pet.atComputer() && pet.feel().feeling !== "sleepy";
+}
+
+function stroll(x, done) {
+  const [now] = win.getPosition();
+  const dx = Math.round(x - now);
+  if (Math.abs(dx) < 4) return done();
+  send("stroll", dx);
+  const check = setInterval(() => {
+    if (!alive(win)) return clearInterval(check);
+    if (Math.abs(win.getPosition()[0] - (now + dx)) <= 3 || falling || holding) {
+      clearInterval(check);
+      done();
+    }
+  }, 100);
+  walk(dx);
+}
+
+function climb(y, done) {
+  clearInterval(climbTimer);
+  send("airborne");
+  climbTimer = setInterval(() => {
+    if (!alive(win) || holding || falling) return clearInterval(climbTimer);
+    const [x, now] = win.getPosition();
+    const step = Math.sign(y - now) * Math.min(6, Math.abs(y - now));
+    if (Math.abs(y - now) <= 1) {
+      clearInterval(climbTimer);
+      send("landed", 0);
+      return done();
+    }
+    win.setPosition(x, now + step);
+  }, 16);
+}
+
+async function peek(force = false) {
+  if (!force && (Date.now() < nextPeek || !canPeek())) return;
+  if (force && (peeking || !alive(win) || !pet.brain.client)) return;
+  nextPeek = Date.now() + (PEEK_EVERY[0] + Math.random() * (PEEK_EVERY[1] - PEEK_EVERY[0])) * 60_000;
+  peeking = true;
+  try {
+    const W = width();
+    const H = height();
+    const [px, py] = win.getPosition();
+    const display = screen.getDisplayNearestPoint({ x: Math.round(px + W / 2), y: Math.round(py + H / 2) });
+    const { bounds, workArea } = display;
+    const shot = { width: 1280, height: Math.round((1280 * bounds.height) / bounds.width) };
+    const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: shot });
+    const source = sources.find((item) => item.display_id === String(display.id)) || sources[0];
+    if (!source || source.thumbnail.isEmpty()) return;
+    const seen = await pet.brain.look(source.thumbnail.toJPEG(70));
+    if (!seen || !alive(win)) return;
+    if (place.pinned || seen.x === null || seen.y === null) return pet.announce(seen.text);
+    const x = Math.round(Math.max(workArea.x, Math.min(workArea.x + workArea.width - W, bounds.x + seen.x * bounds.width - W / 2)));
+    const y = Math.round(Math.max(workArea.y - H * 0.3, Math.min(workArea.y + workArea.height - H, bounds.y + seen.y * bounds.height - H + 8)));
+    stroll(x, () =>
+      climb(y, () => {
+        pet.announce(seen.text);
+        clearTimeout(perchTimer);
+        perchTimer = setTimeout(() => !holding && !falling && fall(0, 0), PERCH_SECONDS * 1000);
+      })
+    );
+  } catch (error) {
+    console.warn(`[peek] ${error.message}`);
+  } finally {
+    peeking = false;
+  }
+}
+
 function nap() {
   if (!alive(win)) return send("walked", { side: 1 });
   const W = width();
@@ -578,6 +659,14 @@ function menu() {
       ? { label: "Call's over", click: endCall }
       : { label: "I'm on a call", click: startCall },
     { label: "Quiet for 1 hour (in a meeting)", click: quietFor(60) },
+    ...(pet.config.pet?.peek === true
+      ? [
+          { label: "Look at my screen now", click: () => peek(true) },
+          Date.now() < peekPausedUntil
+            ? { label: "Start looking at my screen again", click: () => ((peekPausedUntil = 0), refreshTray()) }
+            : { label: "Don't look at my screen for 2 hours", click: () => ((peekPausedUntil = Date.now() + 2 * 3600_000), refreshTray()) },
+        ]
+      : []),
     { label: "Pin her here", type: "checkbox", checked: Boolean(place.pinned), click: (item) => pin(item.checked) },
     { label: "Start with my computer", type: "checkbox", checked: startsWithComputer(), click: (item) => (setStartup(item.checked), refreshTray()) },
     { type: "separator" },
@@ -605,6 +694,10 @@ app.whenReady().then(() => {
   app.dock?.hide();
   pet = new Deskpet();
   pet.idleSeconds = () => powerMonitor.getSystemIdleTime();
+  protocol.handle("maomao", (request) => {
+    const file = path.basename(decodeURIComponent(new URL(request.url).pathname));
+    return net.fetch(pathToFileURL(path.join(pet.filesDir, file)).toString());
+  });
   createWindow();
 
   tray = new Tray(nativeImage.createFromPath(ICON).resize({ width: LINUX ? 24 : 16, height: LINUX ? 24 : 16 }));
@@ -620,6 +713,8 @@ app.whenReady().then(() => {
   pet.events.on("feeling", refreshTray);
   pet.events.on("angry", () => send("angry"));
   setInterval(watchArrival, 3000);
+  nextPeek = Date.now() + 5 * 60_000;
+  setInterval(() => peek().catch(() => {}), 30_000);
   pet.events.on("feeling", (feeling) => {
     if (alive(chatWin)) chatWin.webContents.send("chat:feeling", feeling);
   });
@@ -635,13 +730,15 @@ app.whenReady().then(() => {
     feeling: pet.feeling || pet.feel().feeling,
     history: pet.desk.slice(-100),
   }));
-  ipcMain.handle("chat:send", async (_event, text) => {
+  ipcMain.handle("chat:send", async (_event, text, uploads = []) => {
     send("flash", "talk");
-    const reply = await pet.deskChat(String(text).slice(0, 2000));
+    const files = (Array.isArray(uploads) ? uploads : []).filter((upload) => upload?.data?.byteLength && upload.data.byteLength <= MAX_UPLOAD);
+    const reply = await pet.deskChat(String(text || "").slice(0, 2000), files);
     send("flash", "happy");
     return reply;
   });
   ipcMain.handle("chat:lists", lists);
+  ipcMain.on("chat:open", (_event, file) => shell.openPath(path.join(pet.filesDir, path.basename(String(file)))));
   ipcMain.handle("chat:forget", (_event, id) => (pet.memory.forget(id), lists()));
   ipcMain.handle("chat:cancel", (_event, id) => (pet.memory.cancel(id), lists()));
   ipcMain.on("chat:close", () => alive(chatWin) && chatWin.hide());

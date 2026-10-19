@@ -32,6 +32,10 @@ function load() {
   try {
     style = fs.readFileSync(path.join(dir, "style.md"), "utf8");
   } catch {}
+  let knows = "";
+  try {
+    knows = fs.readFileSync(path.join(dir, "knows.md"), "utf8");
+  } catch {}
   return {
     dir,
     isExample: dir === path.join(ROOT, "me.example"),
@@ -39,6 +43,7 @@ function load() {
     phrases,
     examples,
     style,
+    knows,
     dataDir: process.env.DESKPET_DATA || path.join(ROOT, "data"),
     env: {
       anthropicKey: process.env.ANTHROPIC_API_KEY || secrets.anthropicKey || "",

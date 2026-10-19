@@ -2,8 +2,8 @@ import * as THREE from "../node_modules/three/build/three.module.min.js";
 
 const PALETTES = {
   maomao: {
-    hair: "#1f4a45", hairShine: "#3c7f74", eyes: "#5b5fcf", eyesLight: "#a9b0f5", skin: "#f3d9c8", outfit: "#6fae6c", outfitDark: "#4d8a52",
-    collar: "#a6dbb1", cuff: "#cfe07c", skirt: "#7a2f4a", ribbon: "#7f98e0", ink: "#232a2a", shoe: "#3b2b2b", blush: "#ff8fab",
+    hair: "#26332f", hairShine: "#55736a", eyes: "#3e8a7c", eyesLight: "#a6dcc8", skin: "#f8e6da", outfit: "#a9caa2", outfitDark: "#7ea582",
+    collar: "#f5f2e8", cuff: "#557d66", skirt: "#3f6152", ribbon: "#d8e6cf", ink: "#1e2624", shoe: "#3b2f2a", blush: "#f59aa8",
   },
   catgirl: {
     hair: "#4a3355", hairShine: "#7a5a8c", eyes: "#8a5cf0", eyesLight: "#c7b2fa", skin: "#ffe6d8", outfit: "#ffb8cf", outfitDark: "#f08fb0",
@@ -42,6 +42,64 @@ function chin(geometry, radius) {
   }
   geometry.computeVertexNormals();
   return geometry;
+}
+
+function toonRamp() {
+  const texture = new THREE.DataTexture(new Uint8Array([120, 120, 120, 255, 205, 205, 205, 255, 255, 255, 255, 255]), 3, 1);
+  texture.minFilter = THREE.NearestFilter;
+  texture.magFilter = THREE.NearestFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function strand(points, width, thick) {
+  const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p)));
+  const steps = 24;
+  const ring = 8;
+  const frames = curve.computeFrenetFrames(steps, false);
+  const vertices = [];
+  const indices = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const at = curve.getPointAt(t);
+    const tangent = curve.getTangentAt(t);
+    const out = new THREE.Vector3(at.x, 0, at.z).normalize();
+    if (out.lengthSq() < 0.5) out.copy(frames.normals[i]);
+    const across = new THREE.Vector3().crossVectors(tangent, out).normalize();
+    const face = new THREE.Vector3().crossVectors(across, tangent).normalize();
+    const w = width * Math.pow(1 - t, 1.25) * (0.75 + 0.25 * Math.sin(Math.min(1, t * 4) * Math.PI / 2)) + 0.001;
+    const h = thick * (1 - t * 0.85) + 0.001;
+    for (let j = 0; j < ring; j++) {
+      const a = (j / ring) * Math.PI * 2;
+      const v = at.clone().addScaledVector(across, Math.cos(a) * w).addScaledVector(face, Math.sin(a) * h);
+      vertices.push(v.x, v.y, v.z);
+    }
+  }
+  for (let i = 0; i < steps; i++) {
+    for (let j = 0; j < ring; j++) {
+      const a = i * ring + j;
+      const b = i * ring + ((j + 1) % ring);
+      indices.push(a, a + ring, b, b, a + ring, b + ring);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function strandFlat(points) {
+  return strand(points, 0.032, 0.008);
+}
+
+function onHead(theta, azimuth, lift = 0) {
+  const r = HEAD_R + lift;
+  return [
+    HEAD_C.x + HEAD_SCALE[0] * r * Math.sin(theta) * Math.sin(azimuth),
+    HEAD_C.y + HEAD_SCALE[1] * r * Math.cos(theta),
+    HEAD_C.z + HEAD_SCALE[2] * r * Math.sin(theta) * Math.cos(azimuth),
+  ];
 }
 
 function outlineMaterial(color, width) {
@@ -131,23 +189,23 @@ export function createPet(canvas, { onPetted } = {}) {
   camera.position.set(0, 1.45, 6.9);
   camera.lookAt(0, 1.15, 0);
 
-  scene.add(new THREE.HemisphereLight(0xfff6ee, 0xc8bcd4, 1.6));
-  const sun = new THREE.DirectionalLight(0xfff1e4, 2.3);
+  scene.add(new THREE.HemisphereLight(0xfff6ee, 0xd8d0e0, 1.25));
+  const sun = new THREE.DirectionalLight(0xfff1e4, 2.0);
   sun.position.set(-2.5, 4, 5);
   scene.add(sun);
   const fill = new THREE.DirectionalLight(0xfff4ec, 0.6);
   fill.position.set(0.5, 0.2, 5);
   scene.add(fill);
-  const rim = new THREE.DirectionalLight(0xffffff, 1.4);
+  const rim = new THREE.DirectionalLight(0xffffff, 0.5);
   rim.position.set(1.5, 3, -4);
   scene.add(rim);
 
-  const ROUGH = { hair: 0.6, skin: 0.62, shoe: 0.5, ribbon: 0.55 };
-  const shade = (color, key, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: ROUGH[key] ?? 0.82, metalness: 0, ...extra });
+  const ramp = toonRamp();
+  const shade = (color, _key, { metalness, roughness, ...extra } = {}) => new THREE.MeshToonMaterial({ color, gradientMap: ramp, ...extra });
   const palette = { ...PALETTES.maomao };
   const mats = {};
   for (const key of ["hair", "skin", "outfit", "outfitDark", "collar", "cuff", "skirt", "ribbon", "shoe"]) {
-    mats[key] = shade(palette[key], key, key === "skin" ? { emissive: palette.skin, emissiveIntensity: 0.22 } : {});
+    mats[key] = shade(palette[key], key, key === "skin" ? { emissive: palette.skin, emissiveIntensity: 0.1 } : {});
   }
   mats.hairBack = shade(palette.hair, "hair", { side: THREE.DoubleSide });
   mats.sleeve = shade(palette.outfit, "outfit", { side: THREE.DoubleSide });
@@ -157,8 +215,9 @@ export function createPet(canvas, { onPetted } = {}) {
   mats.beadTeal = shade("#3aa29d", "hair");
   mats.leaf = shade("#6aa56a");
   mats.earInner = shade(palette.outfitDark);
-  const outline = outlineMaterial(palette.ink, 0.018);
-  const thinOutline = outlineMaterial(palette.ink, 0.012);
+  const outline = outlineMaterial(palette.ink, 0.02);
+  const thinOutline = outlineMaterial(palette.ink, 0.013);
+  const hairLine = outlineMaterial(palette.ink, 0.01);
 
   const root = new THREE.Group();
   const holder = new THREE.Group();
@@ -168,7 +227,7 @@ export function createPet(canvas, { onPetted } = {}) {
   holder.position.y = 2.3;
   rig.position.y = -2.3;
   head.position.y = 1.63;
-  head.scale.setScalar(0.58);
+  head.scale.setScalar(0.66);
   scene.add(root);
   root.add(holder);
   holder.add(rig);
@@ -214,6 +273,18 @@ export function createPet(canvas, { onPetted } = {}) {
   add(body, new THREE.CylinderGeometry(0.27, 0.275, 0.035, 32), mats.outfitDark, { pos: [0, 0.345, 0], scale: [1, 1, 0.8], line: null });
   add(body, new THREE.TorusGeometry(0.085, 0.025, 10, 28), mats.collar, { pos: [0, 1.445, 0.02], rot: [Math.PI / 2 + 0.3, 0, 0], line: thinOutline });
   add(body, new THREE.CylinderGeometry(0.048, 0.056, 0.16, 14), mats.skin, { pos: [0, 1.52, 0], line: null });
+  const robeZ = (x, y) => {
+    let r = 0;
+    for (let i = 1; i < robe.length; i++) if (y >= robe[i - 1].y && y <= robe[i].y) r = robe[i - 1].x + ((robe[i].x - robe[i - 1].x) * (y - robe[i - 1].y)) / (robe[i].y - robe[i - 1].y);
+    return 0.78 * Math.sqrt(Math.max(0, r * r - x * x)) + 0.012;
+  };
+  const lapel = (from, to) => strandFlat([0, 1, 2, 3, 4].map((i) => {
+    const x = from[0] + ((to[0] - from[0]) * i) / 4;
+    const y = from[1] + ((to[1] - from[1]) * i) / 4;
+    return [x, y, robeZ(x, y)];
+  }));
+  add(body, lapel([0.075, 1.43], [-0.11, 1.02]), mats.collar, { line: thinOutline, only: "maomao" });
+  add(body, lapel([-0.075, 1.43], [0.02, 1.2]), mats.collar, { line: thinOutline, only: "maomao" });
   const apron = [[0.282, 0.38], [0.252, 0.5], [0.212, 0.72], [0.18, 0.88]].map(([x, y]) => new THREE.Vector2(x, y));
   add(body, new THREE.LatheGeometry(apron, 20, -0.85, 1.7), shade("#efe6d2", "paper", { side: THREE.DoubleSide }), { scale: [1, 1, 0.78], line: thinOutline, outfit: "shop" });
   const arms = [-1, 1].map((side) => {
@@ -315,25 +386,29 @@ export function createPet(canvas, { onPetted } = {}) {
   cap.scale.set(...HEAD_SCALE);
   cap.rotation.x = 0.21;
   head.add(cap);
-  add(cap, new THREE.SphereGeometry(HEAD_R + 0.05, 48, 24, 0, Math.PI * 2, 0, Math.PI * 0.42), mats.hairBack);
+  add(cap, new THREE.SphereGeometry(HEAD_R + 0.05, 48, 24, 0, Math.PI * 2, 0, Math.PI * 0.36), mats.hairBack);
   add(cap, new THREE.SphereGeometry(HEAD_R + 0.054, 40, 3, Math.PI / 2 - 0.55, 1.1, Math.PI * 0.2, Math.PI * 0.035), mats.hairShine, { line: null });
   add(head, new THREE.SphereGeometry(HEAD_R + 0.045, 48, 24, Math.PI, Math.PI, 0, Math.PI * 0.8), mats.hairBack, { pos: HEAD_C.toArray(), scale: [0.95, 1.1, 0.98] });
   add(head, new THREE.CylinderGeometry(0.44, 0.4, 0.7, 32, 1, true, Math.PI / 2, Math.PI), mats.hairBack, { pos: [0, -0.06, -0.06], scale: [1, 1, 0.9], only: "maomao" });
   add(head, new THREE.CylinderGeometry(0.46, 0.46, 0.4, 32, 1, true, Math.PI / 2, Math.PI), mats.hairBack, { pos: [0, 0.08, -0.05], only: "catgirl" });
 
+  const BANGS = [[-0.62, 0.11, 1.5, -0.12], [-0.42, 0.12, 1.58, -0.06], [-0.2, 0.12, 1.5, 0.05], [-0.04, 0.09, 1.38, 0.1], [0.12, 0.11, 1.52, 0.04], [0.32, 0.12, 1.6, 0.06], [0.54, 0.11, 1.5, 0.12], [0.78, 0.1, 1.62, 0.1], [-0.82, 0.1, 1.62, -0.1]];
+  for (const [azimuth, width, end, curl] of BANGS) {
+    const points = [0, 0.25, 0.5, 0.75, 1].map((t) => onHead(0.45 + (end - 0.45) * t, azimuth + curl * t * t, 0.07 - 0.035 * t));
+    add(head, strand(points, width, 0.035), mats.hair, { line: hairLine, only: "maomao" });
+  }
   const braids = [];
   for (const side of [-1, 1]) {
-    between(head, new THREE.CapsuleGeometry(0.065, 0.42, 6, 12), mats.hair, [side * 0.43, 0.68, 0.26], [side * 0.4, 0.05, 0.31], { scale: [0.75, 1, 0.45], only: "maomao" });
-    add(head, new THREE.CapsuleGeometry(0.068, 0.36, 6, 12), mats.hair, { pos: [side * 0.55, 0.18, 0.08], rot: [0.06, 0, side * 0.1] });
+    add(head, new THREE.CapsuleGeometry(0.068, 0.36, 6, 12), mats.hair, { pos: [side * 0.55, 0.18, 0.08], rot: [0.06, 0, side * 0.1], only: "catgirl" });
     const braid = new THREE.Group();
-    braid.position.set(side * 0.53, -0.1, 0.1);
+    braid.position.copy(new THREE.Vector3(...onHead(1.75, side * 1.05, 0.05)));
     head.add(braid);
     braids.push(braid);
     parts.maomao.push(braid);
-    add(braid, new THREE.SphereGeometry(0.055, 12, 10), mats.beadRed, { pos: [0, -0.02, 0], line: thinOutline });
-    for (const [y, r] of [[-0.1, 0.07], [-0.2, 0.064], [-0.29, 0.056]]) add(braid, new THREE.SphereGeometry(r, 12, 10), mats.hair, { pos: [0, y, 0], scale: [1, 1.15, 1], line: thinOutline });
-    add(braid, new THREE.SphereGeometry(0.05, 12, 10), mats.beadTeal, { pos: [0, -0.37, 0], line: thinOutline });
-    add(braid, new THREE.ConeGeometry(0.04, 0.09, 10), mats.hair, { pos: [0, -0.44, 0], rot: [Math.PI, 0, 0], line: thinOutline });
+    const top = onHead(0.9, side * 0.95, 0.07).map((v, i) => v - braid.position.getComponent(i));
+    add(braid, strand([top, [side * 0.01, 0, 0.02], [side * -0.02, -0.35, 0.03], [side * -0.05, -0.68, 0.0], [side * -0.03, -0.86, -0.02]], 0.1, 0.045), mats.hair, { line: hairLine });
+    add(braid, strand([top.map((v, i) => v + [side * 0.05, 0, -0.08][i]), [side * 0.05, -0.02, -0.06], [side * 0.03, -0.3, -0.06], [side * 0.0, -0.55, -0.07]], 0.08, 0.04), mats.hair, { line: hairLine });
+    add(braid, new THREE.CylinderGeometry(0.05, 0.05, 0.05, 14), mats.ribbon, { pos: [side * -0.012, -0.3, 0.03], line: thinOutline });
   }
 
   add(head, new THREE.SphereGeometry(0.2, 20, 16), mats.hair, { pos: [0, 0.98, -0.3], only: "maomao" });
@@ -459,6 +534,7 @@ export function createPet(canvas, { onPetted } = {}) {
     mats.earInner.color.set(palette.outfitDark);
     outline.color.set(palette.ink);
     thinOutline.color.set(palette.ink);
+    hairLine.color.set(palette.ink);
     state.lastFace = "";
   }
 

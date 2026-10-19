@@ -23,6 +23,10 @@ function read(home) {
       break;
     } catch {}
   }
+  let knows = "";
+  try {
+    knows = fs.readFileSync(path.join(home, "knows.md"), "utf8");
+  } catch {}
   const defaults = readJson(path.join(EXAMPLE, "config.json"), {}).checkins || [];
   const checkins = {};
   for (const kind of CHECKINS) {
@@ -36,6 +40,11 @@ function read(home) {
     petName: config.petName || "Maomao",
     character: config.pet?.character || "maomao",
     style: style.startsWith("# How I text") ? "" : style,
+    knows,
+    meTimezone: config.meTimezone || "",
+    breaks: config.pet?.breaks !== false,
+    peek: config.pet?.peek === true,
+    health: config.health !== false,
     timezone: config.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "",
     start: config.workHours?.start || "09:00",
     end: config.workHours?.end || "18:00",
@@ -58,6 +67,8 @@ function write(home, form) {
     me: String(form.talksLike || "").trim(),
     petName: String(form.petName || "").trim() || "Maomao",
     timezone: String(form.timezone || "").trim(),
+    meTimezone: String(form.meTimezone || "").trim(),
+    health: form.health !== false,
     workHours: { start: form.start || "09:00", end: form.end || "18:00", days: (form.days || []).map(Number) },
     checkins: CHECKINS.filter((kind) => form.checkins?.[kind]?.on).map((kind) => ({ time: form.checkins[kind].time, kind })),
   });
@@ -68,6 +79,8 @@ function write(home, form) {
     ...pet,
     character: form.character || "maomao",
     sound: form.sound !== false,
+    breaks: form.breaks !== false,
+    peek: form.peek === true,
     wander: form.wander !== false,
     background: form.background === "none" ? "none" : "black",
     size: ["small", "large"].includes(form.size) ? form.size : "medium",
@@ -80,6 +93,7 @@ function write(home, form) {
     JSON.stringify({ anthropicKey: String(form.anthropicKey || "").trim() }, null, 2)
   );
   fs.writeFileSync(path.join(home, "style.md"), String(form.style || ""));
+  fs.writeFileSync(path.join(home, "knows.md"), String(form.knows || ""));
   if (!fs.existsSync(path.join(home, "phrases.json"))) fs.copyFileSync(path.join(EXAMPLE, "phrases.json"), path.join(home, "phrases.json"));
 }
 

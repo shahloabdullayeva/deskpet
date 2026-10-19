@@ -4,7 +4,7 @@ const { EventEmitter } = require("events");
 
 const { load } = require("./config");
 const { localParts, isWorkTime, isDue, toMinutes } = require("./clock");
-const { Brain, stripEmoji } = require("./brain");
+const { Brain, clean } = require("./brain");
 const { Memory } = require("./memory");
 
 const FACES = { sleepy: "sleepy", lonely: "pout", happy: "happy", calm: "idle", annoyed: "pout" };
@@ -17,6 +17,8 @@ const AWAY_AFTER_SECONDS = 5 * 60;
 const DOZE_AFTER_SECONDS = 10 * 60;
 const NAP_AFTER_SECONDS = 30 * 60;
 const WORKING_LATE_AFTER_MINUTES = 60;
+const BREAK_AFTER_MINUTES = 90;
+const HEALTH_TIME = "13:30";
 
 class Deskpet {
   constructor() {
@@ -27,6 +29,7 @@ class Deskpet {
     this.env = loaded.env;
     this.statePath = path.join(loaded.dataDir, "state.json");
     this.chatPath = path.join(loaded.dataDir, "chat.json");
+    this.filesDir = path.join(loaded.dataDir, "files");
     this.desk = this.readChat();
     this.memory = new Memory(loaded.dataDir, loaded.config.timezone);
     this.brain = new Brain(loaded);
@@ -38,13 +41,14 @@ class Deskpet {
     this.nextRoast = 0;
     this.feeling = null;
     this.startedAt = Date.now();
+    this.activeSince = Date.now();
     this.override = null;
     this.toggles = [];
     this.annoyedUntil = 0;
   }
 
   line(kind, mood = "talk") {
-    const text = stripEmoji(this.brain.pick(kind).text);
+    const text = clean(this.brain.pick(kind).text);
     this.events.emit("say", { text, chime: false, mood });
     return text;
   }
@@ -143,14 +147,14 @@ class Deskpet {
 
   readChat() {
     try {
-      return JSON.parse(fs.readFileSync(this.chatPath, "utf8")).map((entry) => ({ ...entry, text: stripEmoji(entry.text) }));
+      return JSON.parse(fs.readFileSync(this.chatPath, "utf8")).map((entry) => ({ ...entry, text: clean(entry.text) }));
     } catch {
       return [];
     }
   }
 
-  addToChat(role, text) {
-    const entry = { role, text: stripEmoji(text), at: Date.now() };
+  addToChat(role, text, files) {
+    const entry = { role, text: clean(text), at: Date.now(), ...(files?.length ? { files } : {}) };
     this.desk = [...this.desk, entry].slice(-300);
     fs.mkdirSync(path.dirname(this.chatPath), { recursive: true });
     fs.writeFileSync(this.chatPath, JSON.stringify(this.desk));
@@ -158,8 +162,18 @@ class Deskpet {
     return entry;
   }
 
-  async deskChat(text) {
-    this.addToChat("him", text);
+  saveFiles(uploads = []) {
+    fs.mkdirSync(this.filesDir, { recursive: true });
+    return uploads.slice(0, 10).map((upload, index) => {
+      const name = path.basename(String(upload.name || "file")).replace(/[^\w.\- ]+/g, "_").slice(-80) || "file";
+      const file = `${Date.now()}-${index}-${name}`;
+      fs.writeFileSync(path.join(this.filesDir, file), Buffer.from(upload.data));
+      return { name, type: String(upload.type || ""), size: upload.data.byteLength, file };
+    });
+  }
+
+  async deskChat(text, uploads) {
+    this.addToChat("him", text, this.saveFiles(uploads));
     this.touch();
     const reply = await this.brain.chat(this.desk.slice(-40), this.tools());
     this.addToChat("pet", reply.text);
@@ -174,6 +188,7 @@ class Deskpet {
         const day = new Date().toLocaleDateString("en-US", { weekday: "long", timeZone: this.config.timezone || undefined });
         return [
           `Right now for them it is ${day} ${parts.date} ${parts.hhmm}${this.config.timezone ? ` (${this.config.timezone})` : ""}.`,
+          this.config.me && this.config.meTimezone ? `For ${this.config.me} it is ${localParts(new Date(), this.config.meTimezone).hhmm} (${this.config.meTimezone}).` : ``,
           `You're feeling ${this.feel(parts).feeling} right now, because ${this.feel(parts).why}. Let it color how you talk a little, without making a big deal of it.`,
           ``,
           `What you remember about them:`,
@@ -222,10 +237,16 @@ class Deskpet {
 
   async say(kind, context = {}, { chime = true } = {}) {
     const line = await this.brain.write(kind, context);
-    const text = stripEmoji(line.text);
+    const text = clean(line.text);
     this.events.emit("say", { text, chime, mood: MOODS[kind] || "talk" });
     if (kind !== "tap") this.addToChat("pet", text);
     return { ...line, text };
+  }
+
+  announce(text, mood = "talk") {
+    const line = clean(text);
+    this.events.emit("say", { text: line, chime: false, mood });
+    this.addToChat("pet", line);
   }
 
   tap() {
@@ -259,8 +280,21 @@ class Deskpet {
       await this.say("workingLate", { minutes: parts.minutes - toMinutes(work.end) });
     }
 
+    if (!here) this.activeSince = Date.now();
+    const active = (Date.now() - this.activeSince) / 60_000;
+    if (this.config.pet?.breaks !== false && here && active >= BREAK_AFTER_MINUTES && this.feeling !== "sleepy") {
+      this.activeSince = Date.now();
+      await this.say("stretch", { minutes: Math.round(active) });
+    }
+
+    if (this.config.health !== false && here && !this.state.fired.includes("health") && isDue(parts, work, HEALTH_TIME, 180)) {
+      this.state.fired.push("health");
+      this.saveState();
+      await this.say("health", { memory: this.tools().context() });
+    }
+
     for (const reminder of this.memory.due()) {
-      const text = `Reminder: ${stripEmoji(reminder.text)}`;
+      const text = `Reminder: ${clean(reminder.text)}`;
       this.events.emit("say", { text, chime: true, mood: "talk" });
       this.addToChat("pet", text);
     }
@@ -270,9 +304,7 @@ class Deskpet {
       const first = !this.nextRoast;
       this.nextRoast = Date.now() + roastEvery * (0.7 + Math.random() * 0.6);
       if (!first) {
-        const time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", weekday: "long", timeZone: this.config.timezone || undefined }).formatToParts(new Date());
-        const get = (type) => time.find((part) => part.type === type)?.value || "";
-        await this.say("roast", { memory: this.tools().context(), time: `${get("hour")}:${get("minute")} ${get("dayPeriod")}`, day: get("weekday") });
+        await this.say("roast", { memory: this.tools().context() });
       }
     }
 

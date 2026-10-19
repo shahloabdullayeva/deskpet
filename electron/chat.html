@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: maomao:; style-src 'self'">
 <title>Chat</title>
 <link rel="stylesheet" href="chat.css">
 </head>
@@ -25,7 +25,13 @@
   </section>
   <main id="log"></main>
   <div id="typing" hidden><span></span><span></span><span></span></div>
+  <div id="emojis" hidden></div>
+  <div id="pending" hidden></div>
+  <div id="drop" hidden>Drop to send</div>
   <form id="form">
+    <input id="pick" type="file" multiple hidden>
+    <button id="attach" type="button" title="Send a file or picture">📎</button>
+    <button id="emoji" type="button" title="Emoji">🙂</button>
     <textarea id="input" rows="1" placeholder="Message…" autofocus></textarea>
     <button id="send" type="submit" title="Send">➤</button>
   </form>

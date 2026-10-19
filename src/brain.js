@@ -10,11 +10,15 @@ const TASKS = {
   goodbye: () => "Work is over; tell them to wrap up and head home.",
   tap: () => "They just poked you on their screen. React like you were busy with something more important: dry, a little annoyed, maybe a small roast. Never cute.",
   chatter: (context) =>
-    `Send one short casual message out of nowhere, like a friend texting during the day: ask how something you remember is going, comment on the time of day, or make a dry little observation about them. One or two short sentences.\n\n${context.memory || ""}`,
+    `Send one short casual message out of nowhere, like a friend texting during the day: ask how something you remember is going, or make a dry little observation about them or what they are into. One or two short sentences.\n\n${context.memory || ""}`,
   afterCall: (context) =>
     `They just finished a work call of about ${context.minutes} minutes. Casually ask how it went, for example whether things got settled. One short sentence.`,
   roast: (context) =>
-    `Out of nowhere, roast them a little, the way Maomao judges people who don't take care of themselves: their posture, how long they've been staring at the screen, their snacking, their sleep, their life choices, or something you remember about them. It's ${context.time} on a ${context.day}. Dry and short, affectionate underneath, never actually mean or about their looks. One sentence, maybe two.\n\n${context.memory || ""}`,
+    `Out of nowhere, roast them a little, the way Maomao judges people who don't take care of themselves: their snacking, their sleep, their taste, their life choices, or something you remember about them. Dry and short, affectionate underneath, never actually mean or about their looks. One sentence, maybe two.\n\n${context.memory || ""}`,
+  stretch: (context) =>
+    `They've been at the computer for about ${context.minutes} minutes without a real break. Tell them to get up for a minute: stretch, rest their eyes, drink some water. Don't mention how long it's been or the time. Practical, like an apothecary giving orders. One or two short sentences.`,
+  health: (context) =>
+    `Check how they're doing physically today: sleep, energy, headaches, back, eyes, whether they've eaten. Ask about one thing, not a list. If you remember a health thing from before, ask how that is now instead.\n\n${context.memory || ""}`,
   workingLate: (context) =>
     `Their work day ended about ${context.minutes} minutes ago but they are still at the computer. Gently tease them for staying late and tell them not to stay too long. One short sentence.`,
 };
@@ -34,9 +38,7 @@ const FALLBACK = {
   welcomeBack: [{ text: "oh, you're back" }, { text: "there you are" }, { text: "took you long enough" }, { text: "welcome back. i didn't touch anything" }],
   roast: [
     { text: "you've been staring at that screen like it owes you money" },
-    { text: "sit up. your spine is filing a complaint" },
     { text: "when did you last drink water. that wasn't a question, it was a diagnosis" },
-    { text: "i've seen corpses with better posture" },
     { text: "you sigh a lot for someone who chose this" },
     { text: "your face says you've read the same line four times" },
     { text: "i could make a tonic for whatever this is. it would taste terrible. you'd deserve it" },
@@ -64,13 +66,16 @@ const FALLBACK = {
   bigger: [{ text: "finally, a size that matches my importance" }, { text: "yes. bigger. you need supervising" }, { text: "good. now you can see me judging you" }],
   smaller: [{ text: "shrinking me won't make me quieter" }, { text: "smaller. like your attention span" }, { text: "fine. i'll judge you from down here" }],
   fedAngry: [{ text: "you think food fixes this? ...fine. it does a little" }, { text: "bribery. it works. don't tell anyone" }],
+  stretch: [{ text: "up. stretch. you've been sitting there like a mushroom" }, { text: "look at something far away for a minute. your eyes will thank me" }, { text: "stand up, drink water, come back. that's an order" }],
+  health: [{ text: "how did you sleep" }, { text: "headache today or are we fine" }, { text: "did you eat anything real today" }],
   workingLate: [{ text: "still here? don't stay too late" }, { text: "working late again? go home soon ok" }],
   afterCall: [{ text: "how did the call go? did it get settled?" }, { text: "call's done. everything okay?" }, { text: "that was a long one. how did it go?" }],
 };
 
 class Brain {
-  constructor({ config, phrases, examples = [], style, env, dataDir }) {
+  constructor({ config, phrases, examples = [], style, knows = "", env, dataDir }) {
     this.config = config;
+    this.knows = knows;
     this.examples = examples;
     this.phrases = phrases;
     this.style = style;
@@ -78,6 +83,7 @@ class Brain {
     this.client = env.anthropicKey ? new Anthropic({ apiKey: env.anthropicKey }) : null;
     this.last = {};
     this.logFile = dataDir ? path.join(dataDir, "brain.log") : null;
+    this.filesDir = dataDir ? path.join(dataDir, "files") : null;
   }
 
   reason(error) {
@@ -113,7 +119,7 @@ class Brain {
   }
 
   async write(kind, context = {}) {
-    if (!this.client || !(this.claudeFor.includes(kind) || ["chatter", "roast", "afterCall", "workingLate"].includes(kind))) return this.pick(kind);
+    if (!this.client || !(this.claudeFor.includes(kind) || ["chatter", "roast", "afterCall", "workingLate", "stretch", "health"].includes(kind))) return this.pick(kind);
     try {
       const messages =
         kind === "reply"
@@ -130,7 +136,7 @@ class Brain {
   async chat(history, tools) {
     if (!this.client) return { text: this.pick("reply").text, offline: true };
     try {
-      const messages = toMessages(history, this.config.me);
+      const messages = toMessages(history, this.config.me, this.filesDir);
       const system = [{ type: "text", text: this.system() }, { type: "text", text: tools.context() }];
       for (let round = 0; round < 6; round++) {
         const response = await this.client.beta.messages.create({
@@ -163,6 +169,37 @@ class Brain {
     }
   }
 
+  async look(jpeg) {
+    if (!this.client) return null;
+    const user = this.config.him && this.config.him !== "you" ? this.config.him : "the user";
+    const prompt = [
+      `This is a screenshot of ${user}'s screen right now. A small anime girl (that's you) and your chat window may be in it: ignore them.`,
+      `Pick ONE thing on the screen to react to: what they're working on, something written in a spreadsheet or document, a browser tab title, a video, a song, or if it's just the desktop, the wallpaper. Ask about it or comment on it in your voice, one or two short sentences, specific to what you actually see.`,
+      `Then pick where you'll go sit: a spot right on top of that thing (the top edge of a line of text, a cell, a tab, a window's title bar), as fractions of the screenshot's width (x) and height (y), 0 to 1.`,
+      `If the screen shows anything private (passwords, bank or card details, private messages, medical or HR records, someone's personal data), don't mention or describe it at all and set "private" to true.`,
+      `Reply with JSON only: {"say": "...", "x": 0.5, "y": 0.5, "private": false}`,
+    ].join("\n");
+    try {
+      const response = await this.client.beta.messages.create({
+        model: this.config.brain?.model || "claude-opus-5-5",
+        max_tokens: 400,
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+        output_config: { effort: "low" },
+        system: this.system(),
+        messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: jpeg.toString("base64") } }, { type: "text", text: prompt }] }],
+      });
+      const raw = response.content.filter((block) => block.type === "text").map((block) => block.text).join("");
+      const found = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1));
+      if (found.private || !found.say) return null;
+      const fraction = (value) => (Number.isFinite(Number(value)) ? Math.max(0, Math.min(1, Number(value))) : null);
+      return { text: clean(found.say), x: fraction(found.x), y: fraction(found.y) };
+    } catch (error) {
+      this.log("look", error);
+      return null;
+    }
+  }
+
   async ask(messages) {
     const response = await this.client.beta.messages.create({
       model: this.config.brain?.model || "claude-opus-5-5",
@@ -174,7 +211,7 @@ class Brain {
       messages,
     });
     if (response.stop_reason === "refusal") return "";
-    return stripEmoji(textOf(response));
+    return clean(textOf(response));
   }
 
   system() {
@@ -207,8 +244,10 @@ class Brain {
       `Your attitude: serious, unimpressed and a little arrogant. You know you're the smartest one here, especially about medicine, and it shows. You rarely get excited, never gush, sigh at foolishness, and your compliments are rare and backhanded. Underneath you still care, you just won't make a fuss about it.`,
       ``,
       ...voice,
+      this.knows.trim() ? `\nThings you already know:\n${this.knows.trim()}` : ``,
       ``,
-      `Rules: write like a text message, usually 1-3 short sentences. Never use emojis or emoticons. Reply with just the message as plain text, never wrapped in tags like <answer>.`,
+      `Never bring up the day of the week, the date, the time, or how someone is sitting (no "it's sunday", no "it's 3pm", no posture comments). Only mention time if they ask, or when setting or confirming a reminder.`,
+      `Rules: write like a text message, usually 1-3 short sentences. An emoji now and then is fine when it fits, never more than one per message. When they send a picture or file, look at it and react to what is actually in it. Reply with just the message as plain text, never wrapped in tags like <answer>.`,
       `If ${user} asks for help or a question, actually help like a capable assistant, still in your voice and as brief as the answer allows.`,
       `Care shows in small dry ways, never sappy, never guilt-tripping or controlling. Never cutesy or bubbly.`,
       `If ${user} mentions a song, a show or something they're watching, react like a friend would: if it sounds sad or heartbroken, gently check in on how they're feeling; if it's a love song, tease them a little and ask about the person they're thinking of.`,
@@ -218,6 +257,10 @@ class Brain {
       `- When asked to be reminded of something, use set_reminder, then confirm the time back naturally. Write the reminder text the way you'd say it when it's time.`,
       `- If asked what you remember or what reminders there are, check and tell. Forget or cancel things when asked.`,
       `- Bring up what you remember naturally, like a friend who pays attention.`,
+      ``,
+      `You look after ${user}'s health the way an apothecary would:`,
+      `- When they mention sleep, pain, feeling sick, stress, skipped meals or anything about their body, remember it (start the memory with "health:") and ask how it is later, the next day or so.`,
+      `- Give simple practical advice: water, food, rest, breaks, warm tea, stretching. Never diagnose and never name medicine doses. If something sounds serious, keeps coming back, or lasts more than a few days, tell them plainly to see a doctor${me ? ` and to tell ${me}` : ""}.`,
     ]
       .filter((line, index, lines) => line !== "" || lines[index - 1] !== "")
       .join("\n");
@@ -266,17 +309,15 @@ const TOOLS = [
   },
 ];
 
-const EMOJI = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\uFE0F\u200D]/gu;
-
 const TAGS = /<\/?(?:answer|response|reply|message|output|text|final|result)\b[^>]*>/gi;
 const HIDDEN = /<(thinking|reasoning|scratchpad|analysis)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi;
 
-function stripEmoji(text) {
-  return String(text).replace(HIDDEN, "").replace(TAGS, "").replace(EMOJI, "").replace(/[ \t]{2,}/g, " ").replace(/ +([,.!?])/g, "$1").trim();
+function clean(text) {
+  return String(text).replace(HIDDEN, "").replace(TAGS, "").replace(/[ \t]{2,}/g, " ").replace(/ +([,.!?])/g, "$1").trim();
 }
 
 function textOf(response) {
-  return stripEmoji(
+  return clean(
     response.content
       .filter((block) => block.type === "text")
       .map((block) => block.text)
@@ -284,17 +325,40 @@ function textOf(response) {
   );
 }
 
-function toMessages(history, me) {
-  const messages = [];
-  for (const entry of history) {
-    const role = entry.role === "him" ? "user" : "assistant";
-    const content = entry.role === "her" ? `[from ${me}] ${entry.text}` : entry.text;
-    const last = messages[messages.length - 1];
-    if (last && last.role === role) last.content += `\n${content}`;
-    else messages.push({ role, content });
+const IMAGES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const TEXTS = /\.(txt|md|csv|tsv|json|log|xml|html?|css|js|ts|py|sh|ya?ml|ini|conf)$/i;
+const SEE_LAST = 8;
+
+function fileBlocks(files, dir, look) {
+  const blocks = [];
+  for (const file of files || []) {
+    const label = `[sent a file: ${file.name}]`;
+    let data;
+    try {
+      data = look && dir ? fs.readFileSync(path.join(dir, file.file)) : null;
+    } catch {}
+    if (!data) blocks.push({ type: "text", text: label });
+    else if (IMAGES.includes(file.type) && data.length <= 5_000_000) blocks.push({ type: "image", source: { type: "base64", media_type: file.type, data: data.toString("base64") } });
+    else if (file.type === "application/pdf" && data.length <= 30_000_000) blocks.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: data.toString("base64") }, title: file.name });
+    else if ((file.type.startsWith("text/") || TEXTS.test(file.name)) && data.length <= 200_000) blocks.push({ type: "text", text: `${label}\n${data.toString("utf8")}` });
+    else blocks.push({ type: "text", text: `${label} (a ${file.type || "file"} you can't open, too big or not a kind you can read)` });
   }
+  return blocks;
+}
+
+function toMessages(history, me, dir) {
+  const messages = [];
+  history.forEach((entry, index) => {
+    const role = entry.role === "him" ? "user" : "assistant";
+    const text = entry.role === "her" ? `[from ${me}] ${entry.text}` : entry.text;
+    const content = [...(role === "user" ? fileBlocks(entry.files, dir, index >= history.length - SEE_LAST) : []), ...(text ? [{ type: "text", text }] : [])];
+    if (!content.length) return;
+    const last = messages[messages.length - 1];
+    if (last && last.role === role) last.content.push(...content);
+    else messages.push({ role, content });
+  });
   while (messages.length && messages[0].role !== "user") messages.shift();
   return messages;
 }
 
-module.exports = { Brain, toMessages, stripEmoji };
+module.exports = { Brain, toMessages, clean };

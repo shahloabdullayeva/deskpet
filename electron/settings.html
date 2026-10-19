@@ -42,6 +42,10 @@
       <input id="talksLike" type="text" placeholder="Someone's name, if she should text like them">
       <label for="style">How she should talk (optional)</label>
       <textarea id="style" rows="3" placeholder="mostly lowercase, short messages, teases a little"></textarea>
+      <label for="meTimezone">Their time zone (optional)</label>
+      <input id="meTimezone" type="text" placeholder="e.g. Asia/Tashkent, so she knows what time it is for them">
+      <label for="knows">Things she should know (optional)</label>
+      <textarea id="knows" rows="5" placeholder="one fact per line: about you, the person she texts like, people in your life"></textarea>
     </section>
 
     <section>
@@ -62,6 +66,10 @@
       <h2>Behaviour</h2>
       <label class="check"><input id="sound" type="checkbox"> Chime when a message pops up</label>
       <label class="check"><input id="wander" type="checkbox"> Let her walk around</label>
+      <label class="check"><input id="breaks" type="checkbox"> Tell me to take a break after 1.5 hours at the computer</label>
+      <label class="check"><input id="health" type="checkbox"> Ask how I'm feeling once a day</label>
+      <label class="check"><input id="peek" type="checkbox"> Let her look at my screen now and then</label>
+      <p class="hint">About every 20-35 minutes she takes a screenshot, sends it to Claude to see what you're doing, climbs onto something and comments on it. Nothing is saved. She stays quiet about passwords, banking and private messages, and never looks during a call, a quiet hour, or while you're away. You can pause it from her menu. Uses a little Claude credit each time.</p>
       <label for="chatterMinutes">Casual messages</label>
       <select id="chatterMinutes">
         <option value="0">Off</option>
