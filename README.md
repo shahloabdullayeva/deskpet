@@ -6,9 +6,9 @@ you during the work day.
 
 ![Maomao in 3D: idle, talking, happy, annoyed, sleepy, and the cat-girl look](docs/maomao.png)
 
-She is a small 3D character drawn live with three.js: a little person with a neck, shoulders,
-arms that bend at the elbow, hands tucked in her sleeves and legs that step when she walks, lit
-with soft shading so she looks round. She glances at your mouse now and then, breathes, shifts
+She is Kei's free "Maomao" VRoid model (VRoid Hub, credit required, used unmodified), animated live
+with three.js and three-vrm: her real skeleton walks, climbs, waves and points, her face blinks and
+changes expression, she lip-moves while talking and her hair and skirt swing with physics. She glances at your mouse now and then, breathes, shifts
 her weight, blinks and bounces instead of being a flat picture.
 
 ## Install (Windows)
@@ -165,9 +165,9 @@ npm test
 ```
 
 `src/` is the brain (chat with memory and reminder tools, the work-day schedule, settings),
-`electron/` is the pet, chat and settings windows. `electron/pet3d.js` builds her 3D model from
-simple shapes with toon shading and an ink outline, and draws her face onto a texture so it can
-change expression; `electron/pet.js` handles the mouse (petting, clicks, carrying, throwing,
+`electron/` is the pet, chat and settings windows. `electron/petvrm.js` loads and animates
+`electron/models/maomao.vrm`; `electron/pet3d.js` is the older model built from simple shapes,
+used only if the VRM fails to load; `electron/pet.js` handles the mouse (petting, clicks, carrying, throwing,
 resizing) and talks to `electron/main.js`, which moves the window, does the falling and
 bouncing, and tells her where the mouse is so she can look at it. Custom pictures in
 `me/character/` (idle.png, talk.png, ...) still replace the 3D model if you add them. Pushing to GitHub builds the Windows

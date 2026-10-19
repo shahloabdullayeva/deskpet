@@ -1,22 +1,45 @@
 import { createPet } from "./pet3d.js";
+import { createVrmPet } from "./petvrm.js";
 
 const petEl = document.getElementById("pet");
 const bubble = document.getElementById("bubble");
 const badge = document.getElementById("badge");
 const progress = document.getElementById("progress");
 const art = document.getElementById("art");
-const sceneEl = document.getElementById("scene");
+let sceneEl = document.getElementById("scene");
 const rootEl = document.documentElement;
 
 const ACTIONS = { look: 3, sniff: 3.2, yawn: 2.6, stretch: 2.4, read: 7, grind: 5.5 };
 const SECONDS = { ...ACTIONS, wave: 2.6, search: 4.5 };
 const LONELY_AFTER = 10 * 60_000;
 
-const model = start3d();
+let impl = start3d();
+const model = new Proxy({}, { get: (_, key) => impl[key] });
 
 function start3d() {
+  const onPetted = () => window.pet.petted();
   try {
-    return createPet(sceneEl, { onPetted: () => window.pet.petted() });
+    return createVrmPet(sceneEl, {
+      url: "models/maomao.vrm",
+      onPetted,
+      onFail: (error) => {
+        console.warn(`model failed, using the built-in one: ${error.message}`);
+        impl.dispose();
+        const fresh = sceneEl.cloneNode();
+        sceneEl.replaceWith(fresh);
+        sceneEl = fresh;
+        impl = fallback3d(onPetted);
+        render();
+      },
+    });
+  } catch {
+    return fallback3d(onPetted);
+  }
+}
+
+function fallback3d(onPetted) {
+  try {
+    return createPet(sceneEl, { onPetted });
   } catch (error) {
     console.warn(`3D failed, showing her picture instead: ${error.message}`);
     const still = () => {};

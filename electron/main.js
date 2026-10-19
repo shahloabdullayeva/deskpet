@@ -681,7 +681,7 @@ function menu() {
         { label: "Suspicious mushroom", click: () => feed("mushroom") },
       ],
     },
-    ...((pet.config.pet?.character || "maomao") === "maomao"
+    ...((pet.config.pet?.character || "maomao") === "maomao" && !fs.existsSync(path.join(__dirname, "models", "maomao.vrm"))
       ? [{ label: "Change clothes", submenu: Object.entries(OUTFITS).map(([name, { label }]) => ({ label, type: "radio", checked: (place.outfit || "servant") === name, click: () => wear(name) })) }]
       : []),
     pet.feel().feeling === "sleepy"

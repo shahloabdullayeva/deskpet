@@ -2,7 +2,7 @@ import * as THREE from "../node_modules/three/build/three.module.min.js";
 
 const PALETTES = {
   maomao: {
-    hair: "#26332f", hairShine: "#55736a", eyes: "#3e8a7c", eyesLight: "#a6dcc8", skin: "#f5dccb", outfit: "#a9caa2", outfitDark: "#7ea582",
+    hair: "#2c5249", hairShine: "#5d8f80", eyes: "#3e8a7c", eyesLight: "#a6dcc8", skin: "#f5dccb", outfit: "#a9caa2", outfitDark: "#7ea582",
     collar: "#f5f2e8", cuff: "#557d66", skirt: "#3f6152", ribbon: "#d8e6cf", ink: "#1e2624", shoe: "#3b2f2a", blush: "#f59aa8",
   },
   catgirl: {
@@ -67,7 +67,7 @@ function strand(points, width, thick) {
     if (out.lengthSq() < 0.5) out.copy(frames.normals[i]);
     const across = new THREE.Vector3().crossVectors(tangent, out).normalize();
     const face = new THREE.Vector3().crossVectors(across, tangent).normalize();
-    const w = width * Math.pow(1 - t, 1.25) * (0.75 + 0.25 * Math.sin(Math.min(1, t * 4) * Math.PI / 2)) + 0.001;
+    const w = width * Math.pow(1 - t, 1.6) * (0.75 + 0.25 * Math.sin(Math.min(1, t * 4) * Math.PI / 2)) + 0.001;
     const h = thick * (1 - t * 0.85) + 0.001;
     for (let j = 0; j < ring; j++) {
       const a = (j / ring) * Math.PI * 2;
@@ -110,7 +110,7 @@ function outlineMaterial(color, width) {
   return material;
 }
 
-function heartTexture(color) {
+export function heartTexture(color) {
   const canvas = Object.assign(document.createElement("canvas"), { width: 64, height: 64 });
   const ctx = canvas.getContext("2d");
   ctx.fillStyle = color;
@@ -126,7 +126,7 @@ function heartTexture(color) {
   return new THREE.CanvasTexture(canvas);
 }
 
-function textTexture(text, color) {
+export function textTexture(text, color) {
   const canvas = Object.assign(document.createElement("canvas"), { width: 64, height: 64 });
   const ctx = canvas.getContext("2d");
   ctx.font = "900 46px sans-serif";
@@ -140,7 +140,7 @@ function textTexture(text, color) {
   return new THREE.CanvasTexture(canvas);
 }
 
-function angerTexture() {
+export function angerTexture() {
   const canvas = Object.assign(document.createElement("canvas"), { width: 64, height: 64 });
   const ctx = canvas.getContext("2d");
   ctx.lineCap = "round";
@@ -172,7 +172,7 @@ function shadowTexture() {
   return new THREE.CanvasTexture(canvas);
 }
 
-const spring = (value, target, velocity, k, damping, dt) => {
+export const spring = (value, target, velocity, k, damping, dt) => {
   const accel = (target - value) * k - velocity * damping;
   velocity += accel * dt;
   return [value + velocity * dt, velocity];
@@ -388,16 +388,19 @@ export function createPet(canvas, { onPetted } = {}) {
   cap.scale.set(...HEAD_SCALE);
   cap.rotation.x = 0.21;
   head.add(cap);
-  add(cap, new THREE.SphereGeometry(HEAD_R + 0.05, 48, 24, 0, Math.PI * 2, 0, Math.PI * 0.36), mats.hairBack);
+  add(cap, new THREE.SphereGeometry(HEAD_R + 0.05, 48, 24, 0, Math.PI * 2, 0, Math.PI * 0.3), mats.hairBack, { line: null });
   add(cap, new THREE.SphereGeometry(HEAD_R + 0.054, 40, 3, Math.PI / 2 - 0.55, 1.1, Math.PI * 0.2, Math.PI * 0.035), mats.hairShine, { line: null });
-  add(head, new THREE.SphereGeometry(HEAD_R + 0.045, 48, 24, Math.PI, Math.PI, 0, Math.PI * 0.8), mats.hairBack, { pos: HEAD_C.toArray(), scale: [0.95, 1.1, 0.98] });
+  add(head, new THREE.SphereGeometry(HEAD_R + 0.045, 48, 24, Math.PI - 0.3, Math.PI + 0.6, 0, Math.PI * 0.8), mats.hairBack, { pos: HEAD_C.toArray(), scale: [0.95, 1.1, 0.98] });
   add(head, new THREE.CylinderGeometry(0.44, 0.4, 0.7, 32, 1, true, Math.PI / 2, Math.PI), mats.hairBack, { pos: [0, -0.06, -0.06], scale: [1, 1, 0.9], only: "maomao" });
   add(head, new THREE.CylinderGeometry(0.46, 0.46, 0.4, 32, 1, true, Math.PI / 2, Math.PI), mats.hairBack, { pos: [0, 0.08, -0.05], only: "catgirl" });
 
-  const BANGS = [[-0.62, 0.11, 1.5, -0.12], [-0.42, 0.12, 1.58, -0.06], [-0.2, 0.12, 1.5, 0.05], [-0.04, 0.09, 1.38, 0.1], [0.12, 0.11, 1.52, 0.04], [0.32, 0.12, 1.6, 0.06], [0.54, 0.11, 1.5, 0.12], [0.78, 0.1, 1.62, 0.1], [-0.82, 0.1, 1.62, -0.1]];
-  for (const [azimuth, width, end, curl] of BANGS) {
-    const points = [0, 0.25, 0.5, 0.75, 1].map((t) => onHead(0.45 + (end - 0.45) * t, azimuth + curl * t * t, 0.07 - 0.035 * t));
-    add(head, strand(points, width, 0.035), mats.hair, { line: hairLine, only: "maomao" });
+  const PART = -0.12;
+  const BANGS = [[-1.0, 1.7], [-0.82, 1.62], [-0.64, 1.52], [-0.47, 1.6], [-0.3, 1.5], [-0.12, 1.4], [0.04, 1.47], [0.2, 1.58], [0.36, 1.5], [0.53, 1.6], [0.7, 1.53], [0.86, 1.63], [1.02, 1.7]];
+  for (const [azimuth, end] of BANGS) {
+    const away = Math.sign(azimuth - PART) || 1;
+    const curl = away * (0.1 + Math.abs(azimuth - PART) * 0.08);
+    const points = [0, 0.3, 0.6, 0.85, 1].map((t) => onHead(0.32 + (end - 0.32) * t, azimuth + curl * t * t, 0.068 - 0.03 * t));
+    add(head, strand(points, 0.16, 0.042), mats.hair, { line: null, only: "maomao" });
   }
   const braids = [];
   for (const side of [-1, 1]) {
