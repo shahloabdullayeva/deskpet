@@ -600,6 +600,7 @@ function endCall() {
 }
 
 let updateReady = false;
+let installUpdate;
 
 function startUpdates() {
   if (!app.isPackaged || process.env.PORTABLE_EXECUTABLE_DIR || process.env.DESKPET_NO_UPDATES) return;
@@ -613,9 +614,28 @@ function startUpdates() {
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.logger = null;
   let manual = false;
+  let installing = false;
   const tell = (text) => send("say", { text, mood: "talk", chime: false });
+  installUpdate = () => {
+    installing = true;
+    tell("installing the update. if it asks for your password, that's me");
+    setTimeout(() => {
+      try {
+        autoUpdater.quitAndInstall(true, true);
+      } catch (error) {
+        autoUpdater.emit("error", error);
+      }
+    }, 1500);
+  };
   autoUpdater.on("error", (error) => {
     console.warn(`[update] ${error.message}`);
+    if (installing) {
+      installing = false;
+      const file = autoUpdater.installerPath;
+      tell(`the update didn't install: ${String(error.message).split("\n")[0].slice(0, 120)}${LINUX && file ? ". i opened it for you, click install there" : ""}`);
+      if (LINUX && file) shell.openPath(file);
+      return;
+    }
     send("updating", null);
     updateStatus = "";
     refreshTray();
@@ -644,12 +664,13 @@ function startUpdates() {
     updateStatus = "";
     refreshTray();
     send("updating", 100);
-    if (manual) tell(`${info.version} is ready. right-click me and pick restart to update`);
+    if (manual || (LINUX && !process.env.APPIMAGE)) tell(`${info.version} is ready. right-click me and pick restart to update`);
     manual = false;
     const install = setInterval(() => {
       const busy = alive(chatWin) && chatWin.isFocused();
       if (busy || powerMonitor.getSystemIdleTime() < 120) return;
       clearInterval(install);
+      if (LINUX && !process.env.APPIMAGE) return;
       send("say", { text: "brb, getting an update", mood: "happy", chime: false });
       setTimeout(() => autoUpdater.quitAndInstall(true, true), 2500);
     }, 30_000);
@@ -709,7 +730,7 @@ function menu() {
     { type: "separator" },
     { label: "Settings…", click: openSettings },
     updateReady
-      ? { label: "Restart to update", click: () => require("electron-updater").autoUpdater.quitAndInstall(true, true) }
+      ? { label: "Restart to update", click: () => installUpdate?.() }
       : updateStatus
         ? { label: updateStatus, enabled: false }
         : process.env.PORTABLE_EXECUTABLE_DIR
